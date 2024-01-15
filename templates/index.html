@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MySQL Data Display</title>
+</head>
+<body>
+    <button onclick="executeFunction()">Click me</button>
+
+    <script>
+        function executeFunction() {
+            fetch('/execute_function')
+                .then(response => response.json())
+                .then(data => console.log(data))
+                .catch(error => console.error('Error:', error));
+        }
+    </script>
+
+
+    <form id="createAccountForm" onsubmit="createAccount(event)">
+        <label for="username">Username:</label>
+        <input type="text" id = "username" name = "username" required>
+        <br>
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required>
+        <br>
+        <button type = "submit">createAccount</button>
+    
+    
+    
+    </form>
+    <!--<script>
+        function createAccount(event){
+            event.preventDefault();
+
+            var username = document.getElementById('username').value;
+            var password = document.getElementById('password').value;
+
+            fetch('/createaccount',{
+                method 'POST',
+                headers: {
+                    'Content-Type':
+                }
+
+
+            })
+
+        }
+
+
+    </script>
+-->
+    
+    <h1>Data from MySQL Database</h1>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>    </th>
+                <th>Name</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in data %}
+                <tr>
+                    <td>{{ row[0] }}</td>
+                    <td>{{ row[1] }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
