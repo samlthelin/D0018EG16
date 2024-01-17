@@ -1,59 +1,88 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, g, request, redirect, url_for
 import mysql.connector
+import random
 
 app = Flask(__name__)
+
 db_config = {
-    'host': 'd0018egroup16.cncg2uywo7t4.eu-north-1.rds.amazonaws.com',
-    'user': 'admin',
-    'password': 'Group161337!',
-    'database': 'humans',
+    'host': 'localhost',
+    'user': 'root',
+    'password': '#Arbetare42',
+    'database': 'storedb',
 }
 
-def create_connection():
-    return mysql.connector.connect(**db_config)
+# Function för att connecta till databasen
+def get_db():
+    if 'db' not in g:
+        g.db = mysql.connector.connect(**db_config)
+    return g.db
+
+# Function för att få en db cursor
+def get_cursor():
+    db = get_db()
+    if 'cursor' not in g:
+        g.cursor = db.cursor()
+    return g.cursor
+
+# Stänger ner databasconnection efter varje databas request, då undviker vi att db cursor pekar fel
+@app.teardown_appcontext
+def close_db(error):
+    if 'db' in g:
+        g.db.close()
+
+# Frontpage
 @app.route('/')
+def index():
+    # Querya databasen på alla produkter i products
+    cursor = get_cursor()
+    cursor.execute('SELECT * FROM products;')
+    data = cursor.fetchall()
 
+    # Skickar vidare det i en html template
+    return render_template('index.html', data=data)
 
-# def get_data():
-#     try: 
-#         connection = create_connection()
-#         cursor = connection.cursor()
-#         query = "SHOW TABLES;"
-#         cursor.execute(query)
-#         data = cursor.fetchall()
-#         cursor.close()
-#         connection.close()
-#         return render_template('index.html', data = data)
-#     except Exception as e:
-#         return f"An error occured: {str(e)}"
+# Beställnings formulär
+@app.route('/order/<int:productid>')
+def order(productid):
+    return render_template('order_form.html', productid=productid)
 
-@app.route('/')
-def homepage():
-    return render_template('index.html')
+@app.route('/submit_order', methods=['POST'])
+def submit_order():
+    # Konverterar input från formulär till python variabler
+    productid = request.form.get('productid')
+    customeremail = request.form.get('customeremail')
+    customeradress = request.form.get('customeradress')
+    customerphone = request.form.get('customerphone')
 
-@app.route('/index2')
-def page2():
-    return render_template('index2.html')
-
-@app.route('/execute_function')
-def execute_function():
+    # Kod för att skicka input till databasen
     try:
-        result = "potatos"
-        return result
+        # Connection till databasen
+        db = mysql.connector.connect(**db_config)
+        cursor = db.cursor()
+
+        #Anger ett random orderid, samt säkerställer att productid behandlas som en int
+        orderid = random.randint(1000, 9999)  
+        productid = int(productid)
+
+        # Skapa ett MySQL commando för att insert input
+        insert_query = """
+            INSERT INTO orders (orderid, productid, customeremail, customeradress, customerphone)
+            VALUES (%s, %s, %s, %s, %s)
+        """
+        cursor.execute(insert_query, (orderid, productid, customeremail, customeradress, customerphone))
+
+        # Commitar databas ändringarna och stänger db connection för att undvika felaktiga cursors
+        db.commit()
+        cursor.close()
+        db.close()
+
+        #Går tillbaka till index
+        return redirect(url_for('index'))
 
     except Exception as e:
-        return 
+        # Fångar problem vid uppladdning till databas
+        print(f"Error submitting order: {e}")
+        return render_template('error.html', error_message="Error submitting order")
 
-@app.route('/execute_query', methods=['POST'])
-def execute_query():
-    query = request.form['query']
-    result = execute_sql_query(query)
-
-    return f"Query result: {result}"
-
-def execute_sql_query(query):
-    return f"Executing query: {query}"
-
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     app.run(debug=True)

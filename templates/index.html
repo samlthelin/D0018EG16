@@ -3,83 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-    <title>MySQL Data Display</title>
+    <title>Product Data</title>
 </head>
-
 <body>
-    <div class="dropdown">
-        <button class="dropbtn">Dropdown</button>
-        <div class="dropdown-content">
-            <a href="{{ url_for('index2') }}">Till en annan sida kanske?</a>
-          <a href="#">Link 2</a>
-          <a href="#">Link 3</a>
-        </div>
-      </div>
+    <h1>Product Data</h1>
+    <!--Loopar igenom alla products i product table--> 
+    <div>
+        {% for row in data %}
+            <div>
+                <!--Loopar igenom alla attributer i prodcuts och visar dom --> 
+                {% for column in row %}
+                    <p>{{ column }}</p>
+                {% endfor %}
+                <!--Skapar en knapp vilket fångar upp productid och skickar vidare den till order formulär --> 
+                <button type="button" onclick="redirectToOrderPage('{{ row[0] }}')">Order</button>            </div>
+        {% endfor %}
+    </div>
 
-</body>
-    <!--
-
-    <button onclick="executeFunction()">Click me</button>
-
+    <!--Hämtar nuvarande url, lägger till /order och productid --> 
     <script>
-        function executeFunction() {
-            fetch('/execute_function')
-                .then(response => response.json())
-                .then(data => console.log(data))
-                .catch(error => console.error('Error:', error));
+        function redirectToOrderPage(productid) {
+            if (productid) {
+                window.location.href = "/order/" + productid;
+            } else {
+                alert("Invalid Product ID");
+            }
         }
     </script>
--->
-<!--
-    <form id="createAccountForm" onsubmit="createAccount(event)">
-        <label for="username">Username:</label>
-        <input type="text" id = "username" name = "username" required>
-        <br>
-        <label for="password">Password</label>
-        <input type="password" id="password" name="password" required>
-        <br>
-        <button type = "submit">createAccount</button>
-    
-    
-    
-    </form>
--->
-<!--
-    <form action="/execute_query" method="post">
-        <label for="query">Enter SQL Query:</label>
-        <input type="text" id="query" name="query" required>
-        <input type="submit" value="Execute Query">
-    </form>
--->
-    <!--
-    <h1>Data from MySQL Database</h1>
-    <table border="1">
-        <thead>
-            <tr>
-                <th>    </th>
-                <th>Name</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for row in data %}
-                <tr>
-                    <td>{{ row[0] }}</td>
-                    <td>{{ row[1] }}</td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
 </body>
-
-
-
-<style>
-    body {
-        background-color: #ffcc00; 
-    }
-</style>
-
--->
-
 </html>
