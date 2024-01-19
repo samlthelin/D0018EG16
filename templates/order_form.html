@@ -10,7 +10,7 @@
     <!--Simpel form där man fyller i email etc, productid tas med i formen men hålls hidden för användare --> 
     <!--Skickas vidare till /submit_order --> 
     <form action="/submit_order" method="post">
-        <input type="hidden" name="productid" value="{{ productid }}">
+        <input type="hidden" name="receiptreference" value="{{ productid }}">
         <label for="customeremail">Email:</label>
         <input type="email" id="customeremail" name="customeremail" required>
         <br>

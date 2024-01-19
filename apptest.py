@@ -5,10 +5,17 @@ import random
 app = Flask(__name__)
 
 db_config = {
-    'host': 'localhost',
-    'user': 'root',
-    'password': '#Arbetare42',
-    'database': 'storedb',
+    'host': 'd0018egroup16.cncg2uywo7t4.eu-north-1.rds.amazonaws.com',
+    'user': 'admin',
+    'password': 'Group161337!',
+    'database': 'sammes',
+}
+
+db_receipt_config = {
+    'host': 'd0018egroup16.cncg2uywo7t4.eu-north-1.rds.amazonaws.com',
+    'user': 'admin',
+    'password': 'Group161337!',
+    'database': 'kvitton',
 }
 
 # Function för att connecta till databasen
@@ -61,17 +68,51 @@ def submit_order():
         cursor = db.cursor()
 
         #Anger ett random orderid, samt säkerställer att productid behandlas som en int
-        orderid = random.randint(1000, 9999)  
+        orderid = random.randint(1000, 9999)
+        orderidtmp = str(orderid)
+        receiptreference = 'receipt_'+orderidtmp
+        
         productid = int(productid)
+        
 
         # Skapa ett MySQL commando för att insert input
         insert_query = """
-            INSERT INTO orders (orderid, productid, customeremail, customeradress, customerphone)
+            INSERT INTO orders (orderid, receiptreference, customeremail, customeradress, customerphone)
             VALUES (%s, %s, %s, %s, %s)
         """
-        cursor.execute(insert_query, (orderid, productid, customeremail, customeradress, customerphone))
+        cursor.execute(insert_query, (orderid, receiptreference, customeremail, customeradress, customerphone))
 
         # Commitar databas ändringarna och stänger db connection för att undvika felaktiga cursors
+        db.commit()
+        cursor.close()
+        db.close()
+
+        db = mysql.connector.connect(**db_receipt_config)
+        cursor = db.cursor()
+
+        # receipt_query = """CREATE TABLE `kvitton`.`%s` (
+        #     `productid` INT NOT NULL,
+        #     `productname` VARCHAR(45) NOT NULL,
+        #     `productcost` VARCHAR(45) NOT NULL,
+        #     PRIMARY KEY (`productid`))"""
+        
+        receipt_query = """CREATE TABLE `kvitton`.`` (
+            `productid` INT NOT NULL,
+            `productname` VARCHAR(45) NOT NULL,
+            `productcost` VARCHAR(45) NOT NULL,
+            PRIMARY KEY (`productid`))"""
+        
+
+        #         "CREATE TABLE `kvitton`."`new_table` (
+        # `productid` INT NOT NULL,
+        # `productname` VARCHAR(100) NOT NULL,
+        # `productcost` VARCHAR(100) NOT NULL,
+        # PRIMARY KEY (`productid`));
+        
+        formatted_query = receipt_query % receiptreference
+        
+        cursor.execute(formatted_query)
+
         db.commit()
         cursor.close()
         db.close()
