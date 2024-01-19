@@ -18,6 +18,13 @@ db_receipt_config = {
     'database': 'kvitton',
 }
 
+db_receipt_config = {
+    'host': 'd0018egroup16.cncg2uywo7t4.eu-north-1.rds.amazonaws.com',
+    'user': 'admin',
+    'password': 'Group161337!',
+    'database': 'sammes',
+}
+
 # Function för att connecta till databasen
 def get_db():
     if 'db' not in g:
@@ -87,35 +94,57 @@ def submit_order():
         cursor.close()
         db.close()
 
+
+
+        # =============== SEARCH COST ===================
         db = mysql.connector.connect(**db_receipt_config)
         cursor = db.cursor()
+
+        searchcost = """SELECT productcost FROM products WHERE productid=%s;"""
+        productcost = cursor.execute(searchcost, (productid))
+
+        db.commit()
+        cursor.close()
+        db.close()
+        # =============== SEARCH COST ===================
+
+
+
+
+       
+        # =============== INSERT RECEIPT IN TABLE ===================
+        db = mysql.connector.connect(**db_receipt_config)
+        cursor = db.cursor()
+
+        insert_receipt_query = """
+            INSERT INTO receipts (orderid, productid, productcost)
+            VALUES (%s, %s, %s)
+        """
+        cursor.execute(insert_receipt_query, (orderid, productid, productcost))
+
+        db.commit()
+        cursor.close()
+        db.close()
+        # =============== INSERT RECEIPT IN TABLE ===================
+
+        
+
+        # ===================== TIDIGARE MULTI-TABLE CREATION (FUNKAR TYP?) ==========================
+        # db = mysql.connector.connect(**db_receipt_config)
+        # cursor = db.cursor()
 
         # receipt_query = """CREATE TABLE `kvitton`.`%s` (
         #     `productid` INT NOT NULL,
         #     `productname` VARCHAR(45) NOT NULL,
         #     `productcost` VARCHAR(45) NOT NULL,
         #     PRIMARY KEY (`productid`))"""
-        
-        receipt_query = """CREATE TABLE `kvitton`.`` (
-            `productid` INT NOT NULL,
-            `productname` VARCHAR(45) NOT NULL,
-            `productcost` VARCHAR(45) NOT NULL,
-            PRIMARY KEY (`productid`))"""
-        
+                
+        # cursor.execute(receipt_query, (receiptreference))
 
-        #         "CREATE TABLE `kvitton`."`new_table` (
-        # `productid` INT NOT NULL,
-        # `productname` VARCHAR(100) NOT NULL,
-        # `productcost` VARCHAR(100) NOT NULL,
-        # PRIMARY KEY (`productid`));
-        
-        formatted_query = receipt_query % receiptreference
-        
-        cursor.execute(formatted_query)
-
-        db.commit()
-        cursor.close()
-        db.close()
+        # db.commit()
+        # cursor.close()
+        # db.close()
+        # ======================= SLUT PÅ DEN FUNKTIONEN =================================
 
         #Går tillbaka till index
         return redirect(url_for('index'))
@@ -127,3 +156,7 @@ def submit_order():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+
+# table för users
+    # userid (unikt) ska kunna hämta alla beställningar
