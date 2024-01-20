@@ -9,26 +9,46 @@
     <h1>Product Data</h1>
     <!--Loopar igenom alla products i product table--> 
     <div>
-        {% for row in data %}
+        {% for column in data %}
             <div>
                 <!--Loopar igenom alla attributer i prodcuts och visar dom --> 
-                {% for column in row %}
-                    <p>{{ column }}</p>
+                {% for row in column %}
+                    <p>{{ row }}</p>
                 {% endfor %}
                 <!--Skapar en knapp vilket fångar upp productid och skickar vidare den till order formulär --> 
-                <button type="button" onclick="redirectToOrderPage('{{ row[0] }}')">Order</button>            </div>
+                <button type="button" onclick="addToCart('{{ column[0] }}', '{{ column[1] }}', '{{ column[2] }}', '{{ column[3] }}', '{{ column[4] }}')">Add to cart</button>            
+            </div> 
         {% endfor %}
+    </div>
+    <div>
+        <button type="button" onclick="redirectToOrderPage()">Checkout</button>
     </div>
 
     <!--Hämtar nuvarande url, lägger till /order och productid --> 
     <script>
-        function redirectToOrderPage(productid) {
-            if (productid) {
-                window.location.href = "/order/" + productid;
+
+        //TODO. Skapa funktion för att lägga till i varukorg
+        //Ändra så att redirectToOrderPage tar emot varukorg array
+        var cartArray = [];
+
+        function addToCart(element1, element2, element3, element4, element5){
+                var productArray =[element1, element2, element3, element4, element5]
+                console.log(productArray)
+                cartArray.push(productArray)
+                console.log(cartArray)
+            }
+        
+
+        function redirectToOrderPage() {
+            // Use cookies to store cartArray
+            if (cartArray.length > 0) {
+                document.cookie = "cartArray=" + JSON.stringify(cartArray) + "; path=/";
+                window.location.href = "/order/";
             } else {
                 alert("Invalid Product ID");
             }
         }
+</script>
     </script>
 </body>
 </html>

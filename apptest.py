@@ -1,4 +1,5 @@
-from flask import Flask, render_template, g, request, redirect, url_for
+from flask import Flask, render_template, g, request, redirect, url_for, session
+import json
 import mysql.connector
 import random
 
@@ -9,6 +10,16 @@ db_config = {
     'user': 'root',
     'password': '#Arbetare42',
     'database': 'storedb',
+<<<<<<< Updated upstream
+=======
+}
+
+db_receipt_config = {
+    'host': 'localhost',
+    'user': 'root',
+    'password': '#Arbetare42',
+    'database': 'receipts',
+>>>>>>> Stashed changes
 }
 
 # Function för att connecta till databasen
@@ -42,17 +53,20 @@ def index():
     return render_template('index.html', data=data)
 
 # Beställnings formulär
-@app.route('/order/<int:productid>')
-def order(productid):
-    return render_template('order_form.html', productid=productid)
+@app.route('/order/')
+def order():
+    cartArray = json.loads(request.cookies.get('cartArray'))
+    return render_template('order_form.html', cartArray=cartArray)
 
 @app.route('/submit_order', methods=['POST'])
 def submit_order():
     # Konverterar input från formulär till python variabler
-    productid = request.form.get('productid')
+    # productid = request.form.get('productid')
     customeremail = request.form.get('customeremail')
     customeradress = request.form.get('customeradress')
     customerphone = request.form.get('customerphone')
+    cartArray = json.loads(request.cookies.get('cartArray'))
+    print("The cart contains:", cartArray)
 
     # Kod för att skicka input till databasen
     try:
@@ -61,8 +75,17 @@ def submit_order():
         cursor = db.cursor()
 
         #Anger ett random orderid, samt säkerställer att productid behandlas som en int
+<<<<<<< Updated upstream
         orderid = random.randint(1000, 9999)  
         productid = int(productid)
+=======
+        orderid = random.randint(1000, 9999)
+        orderidtmp = str(orderid)
+        receiptreference = 'receipt_'+orderidtmp
+        
+        # productid = int(productid)
+        
+>>>>>>> Stashed changes
 
         # Skapa ett MySQL commando för att insert input
         insert_query = """
@@ -76,6 +99,56 @@ def submit_order():
         cursor.close()
         db.close()
 
+<<<<<<< Updated upstream
+=======
+        db = mysql.connector.connect(**db_receipt_config)
+        cursor = db.cursor()
+        
+        
+        
+        receiptreference = receiptreference.replace('-', '_')
+
+        receipt_query = f"""
+            CREATE TABLE `receipts`.`{receiptreference}` (
+                `productid` INT NOT NULL,
+                `productname` VARCHAR(100) NOT NULL,
+                `productcost` INT NOT NULL,
+                `productimagefilepath` VARCHAR(200) NOT NULL,
+                `productcountryoforigin` VARCHAR(200) NOT NULL,
+                PRIMARY KEY (`productid`)
+            )
+        """
+        
+        
+        
+        cursor.execute(receipt_query)
+        db.commit()
+        cursor.close()
+        db.close()
+
+        for cartArrayIndex in cartArray:
+                productid = int(cartArrayIndex[0])
+                productname = cartArrayIndex[1]
+                productcost = int(cartArrayIndex[2])
+                productimagefilepath = cartArrayIndex[3]
+                productcountryoforigin = cartArrayIndex[4]
+                print(productid, productname, productcost, productimagefilepath, productcountryoforigin)
+                db = mysql.connector.connect(**db_receipt_config)
+                cursor = db.cursor()
+
+                insert_query = f"""
+                INSERT INTO `{receiptreference}` (productid, productname, productcost, productimagefilepath, productcountryoforigin)
+                VALUES (%s, %s, %s, %s, %s)
+                """
+                cursor.execute(insert_query, (productid, productname, productcost, productimagefilepath, productcountryoforigin))
+                
+                db.commit()
+                cursor.close()
+                db.close()
+
+        
+
+>>>>>>> Stashed changes
         #Går tillbaka till index
         return redirect(url_for('index'))
 
