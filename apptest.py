@@ -35,7 +35,7 @@ def close_db(error):
         g.db.close()
 
 
-# Frontpage
+# Homepage
 @app.route("/")
 def index():
     # Querya databasen på alla produkter i products
@@ -46,12 +46,39 @@ def index():
     # Skickar vidare det i en html template
     return render_template("index.html", data=data)
 
+@app.route("/submit_user", methods=["POST"])
+def create_account():
+    userVariablesArray = json.loads(request.cookies.get("userVariablesArray"))
+    userid = random.randint(1000, 9999)
+    username = userVariablesArray[0]
+    password = userVariablesArray[1]
+    email = userVariablesArray[2]
+    #print(username, password, email)
+    # Handle the user data as needed
+
+    db = mysql.connector.connect(**db_config)
+    cursor = db.cursor()
+
+    insert_query = """INSERT INTO `users` (userid, username, password, email, roll)
+    VALUES (%s, %s, %s, %s, %s)"""
+    cursor.execute(insert_query,(userid,username,password,email,1),)
+    
+    db.commit()
+    cursor.close()
+    db.close()
+
+    return redirect(url_for("index"))
+
+
 
 # Beställnings formulär
 @app.route("/order/")
 def order():
     cartArray = json.loads(request.cookies.get("cartArray"))
     return render_template("order_form.html", cartArray=cartArray)
+
+
+
 
 
 @app.route("/submit_order", methods=["POST"])

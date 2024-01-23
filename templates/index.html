@@ -20,10 +20,26 @@
             </div> 
         {% endfor %}
     </div>
+
     <div>
         <button type="button" onclick="redirectToOrderPage()">Checkout</button>
-    </div>
 
+    </div>
+    
+    <div>
+        <form id="userForm" action="/submit_user" method="post">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" required>
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" required>
+            <label for="email">Email</label>
+            <input type="text" id="email" name="email" required> 
+            <div>
+                <button type="submit" onclick="getValuesFromCreateAccount()">Create account</button>
+            </div>
+        </form>
+    </div>
+    
     <!--Hämtar nuvarande url, lägger till /order och productid --> 
     <script>
 
@@ -43,12 +59,46 @@
             // Use cookies to store cartArray
             if (cartArray.length > 0) {
                 document.cookie = "cartArray=" + JSON.stringify(cartArray) + "; path=/";
-                window.location.href = "/order/";
+                window.location.href = "/order/"; //Går till (Nuvarande URL) + /order == 127.0.0.1:5000/order. order = order_html
             } else {
                 alert("Invalid Product ID");
             }
         }
-</script>
+        function getValuesFromCreateAccount(){
+            document.getElementById('userForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            createAccount(
+                document.getElementById('username').value,
+                document.getElementById('password').value,
+                document.getElementById('email').value
+        );
+        });
+
+        }
+        
+        function createAccount(username, password, email) {
+            console.log(username, password, email);
+
+            var userVariablesArray = [username, password, email];
+
+            if (userVariablesArray.length > 0) {
+                document.cookie = "userVariablesArray=" + JSON.stringify(userVariablesArray) + "; path=/";
+                console.log("entered cookies");
+                document.getElementById('userForm').submit();
+            }
+        }
+
+
+        // function login(){
+        //     document.addEventListener(){
+        //         var usernameInput = document.getElementById('username')
+        //         var usernameInput = document.getElementById('password')
+                
+        //     }
+        // }
+    
+
+        
     </script>
 </body>
 </html>
