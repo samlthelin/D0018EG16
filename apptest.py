@@ -4,6 +4,7 @@ import mysql.connector
 import random
 
 app = Flask(__name__)
+app.secret_key = 'hej'
 
 db_config = {
     "host": "d0018egroup16.cncg2uywo7t4.eu-north-1.rds.amazonaws.com",
@@ -11,7 +12,6 @@ db_config = {
     "password": "Group161337!",
     "database": "timsfränadatabas",
 }
-
 
 # Function för att connecta till databasen
 def get_db():
@@ -42,9 +42,53 @@ def index():
     cursor = get_cursor()
     cursor.execute("SELECT * FROM products;")
     data = cursor.fetchall()
+    accountstatus = [0,0,0]
 
     # Skickar vidare det i en html template
-    return render_template("index.html", data=data)
+    return render_template("index.html", data=data, accountstatus=accountstatus)
+
+
+@app.route("/login_authentication", methods=["POST"])
+def login_to_account():
+    loginVariablesArray = json.loads(request.cookies.get("loginVariablesArray"))
+    username = loginVariablesArray[0]
+    password = loginVariablesArray[1]
+    print("the username given and password given: ", username, password)
+
+    db = mysql.connector.connect(**db_config)
+    cursor = db.cursor()
+
+    search_query = "SELECT * FROM users WHERE `username`=%s AND `password`=%s;"
+    cursor.execute(search_query, (username, password))
+
+    result = cursor.fetchone()
+    db.commit()
+    cursor.close()
+    db.close()
+    
+    if result:
+        print(f"Username and password combo found")
+        accountstatus = [username, password, 1]
+
+        session['username'] = username
+        session['logged_in'] = True
+
+        return redirect(url_for("index"))
+    
+    else:
+        print(f"User and pass combo not found in table")
+        accountstatus = [username, password, 0]
+        return redirect(url_for("index"))
+    
+
+@app.route('/profile')
+def profile():
+    if 'logged_in' in session and session['logged_in']:
+        username = session['username']
+        return f"Welcome, {username}"
+    else:
+        return redirect(url_for("index"))
+
 
 @app.route("/submit_user", methods=["POST"])
 def create_account():

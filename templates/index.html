@@ -23,7 +23,6 @@
 
     <div>
         <button type="button" onclick="redirectToOrderPage()">Checkout</button>
-
     </div>
     
     <div>
@@ -35,7 +34,19 @@
             <label for="email">Email</label>
             <input type="text" id="email" name="email" required> 
             <div>
-                <button type="submit" onclick="getValuesFromCreateAccount()">Create account</button>
+                <button type="submit" onclick="handleValuesFromForm(0)">Create account</button>
+            </div>
+        </form>
+    </div>
+
+    <div>
+        <form id="loginForm" action="/login_authentication" method="post">
+            <label for="usernameLOG">Username</label>
+            <input type="text" id="usernameLOG" name="usernameLOG" required>
+            <label for="passwordLOG">Password</label>
+            <input type="text" id="passwordLOG" name="passwordLOG" required>
+            <div>
+                <button type="submit" onclick="handleValuesFromForm(1)">Login</button>
             </div>
         </form>
     </div>
@@ -54,7 +65,6 @@
                 console.log(cartArray)
             }
         
-
         function redirectToOrderPage() {
             // Use cookies to store cartArray
             if (cartArray.length > 0) {
@@ -64,41 +74,45 @@
                 alert("Invalid Product ID");
             }
         }
-        function getValuesFromCreateAccount(){
-            document.getElementById('userForm').addEventListener('submit', function(event) {
-            event.preventDefault();
-            createAccount(
-                document.getElementById('username').value,
-                document.getElementById('password').value,
-                document.getElementById('email').value
-        );
-        });
 
-        }
-        
+        function handleValuesFromForm(choice) {
+            if (choice == 0) {
+                var username = document.getElementById('username').value;
+                var password = document.getElementById('password').value;
+                var email = document.getElementById('email').value;
+                createAccount(username, password, email);
+            } else {
+                var usernameLOG = document.getElementById('usernameLOG').value;
+                var passwordLOG = document.getElementById('passwordLOG').value;
+                loginToAccount(usernameLOG, passwordLOG);
+            }
+            }
+
         function createAccount(username, password, email) {
-            console.log(username, password, email);
+            console.log("in create account", username, password, email);
 
             var userVariablesArray = [username, password, email];
 
             if (userVariablesArray.length > 0) {
                 document.cookie = "userVariablesArray=" + JSON.stringify(userVariablesArray) + "; path=/";
-                console.log("entered cookies");
+                console.log("successfully created cookie in create account");
                 document.getElementById('userForm').submit();
             }
         }
 
+        function loginToAccount(username, password) {
+        console.log("här är username och password: ",username, password);
 
-        // function login(){
-        //     document.addEventListener(){
-        //         var usernameInput = document.getElementById('username')
-        //         var usernameInput = document.getElementById('password')
-                
-        //     }
-        // }
-    
+        var loginVariablesArray = [username, password];
 
-        
+        // You might want to check the condition correctly
+        if (loginVariablesArray.length > 0) {
+            document.cookie = "loginVariablesArray=" + JSON.stringify(loginVariablesArray) + "; path=/";
+            console.log("successfully created cookie in login to account");
+            document.getElementById('loginForm').submit();
+    }
+}
+
     </script>
 </body>
 </html>
