@@ -13,39 +13,40 @@ db_config = {
     "database": "timsfränadatabas",
 }
 
-# Function för att connecta till databasen
-def get_db():
-    if "db" not in g:
-        g.db = mysql.connector.connect(**db_config)
-    return g.db
-
-
-# Function för att få en db cursor
-def get_cursor():
-    db = get_db()
-    if "cursor" not in g:
-        g.cursor = db.cursor()
-    return g.cursor
-
-
-# Stänger ner databasconnection efter varje databas request, då undviker vi att db cursor pekar fel
-@app.teardown_appcontext
-def close_db(error):
-    if "db" in g:
-        g.db.close()
-
-
 # Homepage
 @app.route("/")
 def index():
+    if 'logged_in' not in session:
+        session['logged_in'] = False
+        session['username'] = ""
+        session['userid'] = ""
     # Querya databasen på alla produkter i products
-    cursor = get_cursor()
+    db = mysql.connector.connect(**db_config)
+    cursor = db.cursor()
     cursor.execute("SELECT * FROM products;")
+    # SELECT products.*, reviews.userid, reviews.review FROM timsfränadatabas.products JOIN timsfränadatabas.reviews ON products.productid=reviews.productid;
     data = cursor.fetchall()
-    accountstatus = [0,0,0]
-
+    db.commit()
+    cursor.close()
+    db.close()
     # Skickar vidare det i en html template
-    return render_template("index.html", data=data, accountstatus=accountstatus)
+    return render_template("index.html", data=data, logged_in=session['logged_in'])
+
+@app.route("/search_order", methods=["POST"])
+def notLoggedInOrderSearch():
+    searchOrderID = json.loads(request.cookies.get('orderSearchInput'))
+    print("-------> Det ID du sökte efter var: ",searchOrderID)
+    db = mysql.connector.connect(**db_config)
+    cursor = db.cursor()
+
+    orderID_query="""SELECT orders.orderid, orders.customeremail, orders.customeradress, orders.customernumber,orders.kvittoorderid, receipts.productname, receipts.productcost FROM timsfränadatabas.orders JOIN receipts ON orders.kvittoorderid=receipts.kvittoorderid WHERE orders.orderid=%s;"""
+    cursor.execute(orderID_query, (searchOrderID,))
+    result = cursor.fetchall()
+    db.commit()
+    cursor.close()
+    db.close()
+    
+    return render_template("index2.html", result=result)
 
 
 @app.route("/login_authentication", methods=["POST"])
@@ -68,26 +69,36 @@ def login_to_account():
     
     if result:
         print(f"Username and password combo found")
-        accountstatus = [username, password, 1]
 
+        db = mysql.connector.connect(**db_config)
+        cursor = db.cursor()
+        
+        search_query = "SELECT userid FROM users WHERE `username`=%s AND `password`=%s;"
+        cursor.execute(search_query, (username, password))
+   
+        userid = cursor.fetchone()
+        useridToNotTuple = userid[0]
+        db.commit()
+        cursor.close()
+        db.close()
+        print(useridToNotTuple)
+        session['userid'] = useridToNotTuple
         session['username'] = username
         session['logged_in'] = True
+        
 
         return redirect(url_for("index"))
     
     else:
         print(f"User and pass combo not found in table")
-        accountstatus = [username, password, 0]
         return redirect(url_for("index"))
     
 
-@app.route('/profile')
-def profile():
-    if 'logged_in' in session and session['logged_in']:
-        username = session['username']
-        return f"Welcome, {username}"
-    else:
-        return redirect(url_for("index"))
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for('index'))
 
 
 @app.route("/submit_user", methods=["POST"])
@@ -103,9 +114,9 @@ def create_account():
     db = mysql.connector.connect(**db_config)
     cursor = db.cursor()
 
-    insert_query = """INSERT INTO `users` (userid, username, password, email, roll)
-    VALUES (%s, %s, %s, %s, %s)"""
-    cursor.execute(insert_query,(userid,username,password,email,1),)
+    insert_query = """INSERT INTO `users` (userid, username, password, email)
+    VALUES (%s, %s, %s, %s)"""
+    cursor.execute(insert_query,(userid,username,password,email),)
     
     db.commit()
     cursor.close()
@@ -113,6 +124,15 @@ def create_account():
 
     return redirect(url_for("index"))
 
+@app.route("/purchasehistory")
+def purchasehistory():
+    db = mysql.connector.connect(**db_config)
+    cursor = db.cursor()
+    userid = session['userid']
+    search_query="""SELECT orders.orderid, orders.customeremail, orders.customeradress, orders.customernumber,orders.kvittoorderid, receipts.productname, receipts.productcost FROM timsfränadatabas.orders JOIN receipts ON orders.kvittoorderid=receipts.kvittoorderid WHERE orders.userid=%s;"""
+    data = cursor.execute(search_query, (userid,))
+    result = cursor.fetchall()
+    return render_template("purchaseinformation.html", result=result)
 
 
 # Beställnings formulär
@@ -127,6 +147,11 @@ def order():
 
 @app.route("/submit_order", methods=["POST"])
 def submit_order():
+    if session['logged_in']:
+        userid = session['userid']
+    else:
+        userid = 0
+    
     cartArray = json.loads(request.cookies.get("cartArray"))
     print("The cart contains:", cartArray)
 
@@ -147,7 +172,7 @@ def submit_order():
                 productname,
                 productcost,
                 productimagefilepath,
-                productcountryoforigin,
+                productcountryoforigin
             )
             db = mysql.connector.connect(**db_config)
             cursor = db.cursor()
@@ -190,12 +215,12 @@ def submit_order():
 
         # Skapa ett MySQL commando för att insert input
         insert_query = """
-            INSERT INTO orders (orderid, kvittoorderid, customeremail, customeradress, customernumber)
-            VALUES (%s, %s, %s, %s, %s)
+            INSERT INTO orders (orderid, kvittoorderid, customeremail, customeradress, customernumber, userid)
+            VALUES (%s, %s, %s, %s, %s, %s)
         """
         cursor.execute(
             insert_query,
-            (orderid, kvittoorderid, customeremail, customeradress, customernumber),
+            (orderid, kvittoorderid, customeremail, customeradress, customernumber, userid),
         )
 
         # Commitar databas ändringarna och stänger db connection för att undvika felaktiga cursors

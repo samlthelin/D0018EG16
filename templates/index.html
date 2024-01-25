@@ -15,8 +15,11 @@
                 {% for row in column %}
                     <p>{{ row }}</p>
                 {% endfor %}
+
+   
                 <!--Skapar en knapp vilket fångar upp productid och skickar vidare den till order formulär --> 
                 <button type="button" onclick="addToCart('{{ column[0] }}', '{{ column[1] }}', '{{ column[2] }}', '{{ column[3] }}', '{{ column[4] }}')">Add to cart</button>            
+                <button type="button" onclick="addReview()">Add review</button>
             </div> 
         {% endfor %}
     </div>
@@ -24,39 +27,69 @@
     <div>
         <button type="button" onclick="redirectToOrderPage()">Checkout</button>
     </div>
-    
-    <div>
-        <form id="userForm" action="/submit_user" method="post">
-            <label for="username">Username</label>
-            <input type="text" id="username" name="username" required>
-            <label for="password">Password</label>
-            <input type="password" id="password" name="password" required>
-            <label for="email">Email</label>
-            <input type="text" id="email" name="email" required> 
+    {% if not logged_in %}
+        <div>
+            <form id="userForm" action="/submit_user" method="post">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required>
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+                <label for="email">Email</label>
+                <input type="text" id="email" name="email" required> 
+                <div>
+                    <button type="submit" onclick="handleValuesFromForm(0)">Create account</button>
+                </div>
+            </form>
+        </div>
+         
+        <div>
+            <form id="loginForm" action="/login_authentication" method="post">
+                <label for="usernameLOG">Username</label>
+                <input type="text" id="usernameLOG" name="usernameLOG" required>
+                <label for="passwordLOG">Password</label>
+                <input type="text" id="passwordLOG" name="passwordLOG" required>
+                <div>
+                    <button type="submit" onclick="handleValuesFromForm(1)">Login</button>
+                </div>
+            </form>
+        </div>
+        <div>
+            <form id="searchForm" action="/search_order" method="post">
+            <label for="orderSearchInput">Search for order by orderID</label>
+            <input type="text" id="orderSearchInput" name="orderSearchInput" required>
             <div>
-                <button type="submit" onclick="handleValuesFromForm(0)">Create account</button>
+                <button type="submitOrderSearch" onclick="nonLoggedOrderSearch()">Search</button>
             </div>
-        </form>
-    </div>
+            </form>
+        </div>
 
-    <div>
-        <form id="loginForm" action="/login_authentication" method="post">
-            <label for="usernameLOG">Username</label>
-            <input type="text" id="usernameLOG" name="usernameLOG" required>
-            <label for="passwordLOG">Password</label>
-            <input type="text" id="passwordLOG" name="passwordLOG" required>
-            <div>
-                <button type="submit" onclick="handleValuesFromForm(1)">Login</button>
-            </div>
-        </form>
-    </div>
-    
+        
+    {% else %}
+        <p>Welcome! You are now logged in.</p>
+        <button type="submit" onclick="logout()">Logout</button>
+
+        <button type="button" onclick="purchasehistory()">Show purchase history</button>
+    {% endif %}
     <!--Hämtar nuvarande url, lägger till /order och productid --> 
     <script>
 
+        
         //TODO. Skapa funktion för att lägga till i varukorg
         //Ändra så att redirectToOrderPage tar emot varukorg array
         var cartArray = [];
+
+        function addReview(){
+
+        }
+
+        function nonLoggedOrderSearch(){
+            var searchOrderID = document.getElementById('orderSearchInput').value;
+            console.log(searchOrderID)
+            document.cookie = "orderSearchInput=" + JSON.stringify(searchOrderID) + "; path=/";
+            console.log("successfully created cookie in nonLoggedOrderSearch");
+            document.getElementById('searchForm').submit();
+
+        }
 
         function addToCart(element1, element2, element3, element4, element5){
                 var productArray =[element1, element2, element3, element4, element5]
@@ -110,9 +143,17 @@
             document.cookie = "loginVariablesArray=" + JSON.stringify(loginVariablesArray) + "; path=/";
             console.log("successfully created cookie in login to account");
             document.getElementById('loginForm').submit();
-    }
-}
+        }
+        }
 
+        function logout(){
+            window.location.href = "/logout"
+        }
+
+        function purchasehistory(){
+            window.location.href = "/purchasehistory"
+
+        }
     </script>
 </body>
 </html>
