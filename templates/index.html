@@ -19,7 +19,7 @@
    
                 <!--Skapar en knapp vilket fångar upp productid och skickar vidare den till order formulär --> 
                 <button type="button" onclick="addToCart('{{ column[0] }}', '{{ column[1] }}', '{{ column[2] }}', '{{ column[3] }}', '{{ column[4] }}')">Add to cart</button>            
-                <button type="button" onclick="addReview()">Add review</button>
+                <button type="button" onclick="redirectToProductInformation('{{ column[0] }}')">Product information</button>
             </div> 
         {% endfor %}
     </div>
@@ -78,8 +78,10 @@
         //Ändra så att redirectToOrderPage tar emot varukorg array
         var cartArray = [];
 
-        function addReview(){
-
+        function redirectToProductInformation(element1){
+            console.log(typeof element1)
+            document.cookie = "selectedProduct=" + element1 + "; path/="
+            window.location.href ="/productInformation"
         }
 
         function nonLoggedOrderSearch(){
@@ -119,7 +121,7 @@
                 var passwordLOG = document.getElementById('passwordLOG').value;
                 loginToAccount(usernameLOG, passwordLOG);
             }
-            }
+        }
 
         function createAccount(username, password, email) {
             console.log("in create account", username, password, email);
@@ -136,7 +138,8 @@
         function loginToAccount(username, password) {
         console.log("här är username och password: ",username, password);
 
-        var loginVariablesArray = [username, password];
+        var currentPage = window.location.href
+        var loginVariablesArray = [username, password, currentPage];
 
         // You might want to check the condition correctly
         if (loginVariablesArray.length > 0) {

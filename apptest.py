@@ -13,6 +13,10 @@ db_config = {
     "database": "timsfränadatabas",
 }
 
+# SELECT reviews.userid, reviews.review FROM timsfränadatabas.reviews WHERE productid=1;
+# 
+
+
 # Homepage
 @app.route("/")
 def index():
@@ -48,12 +52,37 @@ def notLoggedInOrderSearch():
     
     return render_template("index2.html", result=result)
 
+@app.route("/productInformation")
+def productInformation():
+    if 'logged_in' not in session:
+        session['logged_in'] = False
+        session['username'] = ""
+        session['userid'] = ""
+    selectedProduct = json.loads(request.cookies.get("selectedProduct"))
+    print("you selected product:", selectedProduct)
+    db = mysql.connector.connect(**db_config)
+    cursor = db.cursor()
+    search_query = ("SELECT * FROM products WHERE productid=%s;")
+    cursor.execute(search_query, (selectedProduct,))
+    data = cursor.fetchall()
+    db.commit()
+    cursor.close()
+    cursor = db.cursor()
+    review_query = ("SELECT reviews.reviewid, reviews.review, users.username FROM reviews JOIN users ON reviews.userid=users.userid WHERE productid=%s;")
+    cursor.execute(review_query, (selectedProduct,))
+    review = cursor.fetchall()
+    db.commit()
+    cursor.close()
+    db.close()
+
+    return render_template("productinformation.html", data=data, review=review, selectedProduct=selectedProduct, logged_in=session['logged_in'], userid=session['userid'])
 
 @app.route("/login_authentication", methods=["POST"])
 def login_to_account():
     loginVariablesArray = json.loads(request.cookies.get("loginVariablesArray"))
     username = loginVariablesArray[0]
     password = loginVariablesArray[1]
+    currentPage = loginVariablesArray[2]
     print("the username given and password given: ", username, password)
 
     db = mysql.connector.connect(**db_config)
@@ -86,12 +115,14 @@ def login_to_account():
         session['username'] = username
         session['logged_in'] = True
         
-
-        return redirect(url_for("index"))
+        print(currentPage)
+        return redirect(currentPage)
     
     else:
         print(f"User and pass combo not found in table")
-        return redirect(url_for("index"))
+        print(currentPage)
+        return redirect(currentPage)
+    
     
 
 
@@ -100,6 +131,55 @@ def logout():
     session.clear()
     return redirect(url_for('index'))
 
+@app.route("/submit_response", methods=["POST"])
+def submitresponse():
+    adminVariable = json.loads(request.cookies.get("adminReview"))
+    response = adminVariable[0]
+    reviewID=adminVariable[1]
+
+
+
+    #print(reviewVariables)
+    db = mysql.connector.connect(**db_config)
+    cursor = db.cursor()
+
+    response_query = """INSERT INTO reviews (response, reviewID, userid) 
+    VALUES (%s);"""
+
+    cursor.execute(response_query,(response,reviewID,1),)
+
+    db.commit()
+    cursor.close()
+    db.close()
+
+    return redirect(url_for("productInformation"))
+
+
+@app.route("/submit_review", methods=["POST"])
+def postreview():
+    reviewVariables = json.loads(request.cookies.get("reviewValues"))
+    userid = session['userid']
+    review = reviewVariables[0]
+    productid = reviewVariables[1]
+
+
+    print(reviewVariables)
+    db = mysql.connector.connect(**db_config)
+    cursor = db.cursor()
+
+    review_query = """INSERT INTO reviews (userid, productid, review) 
+    VALUES (%s, %s, %s);"""
+
+    cursor.execute(review_query,(userid,productid,review),)
+
+    db.commit()
+    cursor.close()
+    db.close()
+
+    return redirect(url_for("productInformation"))
+
+
+    
 
 @app.route("/submit_user", methods=["POST"])
 def create_account():

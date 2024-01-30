@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TEST</title>
+</head>
+
+<body>
+    <h1>Product Data</h1>
+    <div>
+        {% for column in data %}
+            <div>
+                <!--Loopar igenom alla attributer i prodcuts och visar dom --> 
+                <p>{{ column }}</p>
+            </div> 
+        {% endfor %}
+
+            {% for column in review %}
+        <div>
+            <p>{{ column[1:] }}</p>
+        </div>
+        {% if userid == 1 %}
+            <form id="respondForm{{ loop.index }}" action="/submit_response" method="post">
+                <input type="text" id="response{{ loop.index }}" name="response" required="required">
+                <div>
+                    <button type="button" onclick="adminResponse(document.getElementById('response{{ loop.index }}').value, '{{ column[0] }}')">Add review</button>
+                </div>
+            </form>
+        {% endif %}
+    {% endfor %}
+
+
+
+        
+        {% if not logged_in %}
+        <form id="loginForm" action="/login_authentication" method="post">
+            <label for="usernameLOG">Username</label>
+            <input type="text" id="usernameLOG" name="usernameLOG" required>
+            <label for="passwordLOG">Password</label>
+            <input type="text" id="passwordLOG" name="passwordLOG" required>
+            <div>
+                <button type="button" onclick="loginToAccount(document.getElementById('usernameLOG').value, document.getElementById('passwordLOG').value)">Login</button>
+            </div>
+        </form>
+        {% else %}
+            <p>Welcome! You are now logged in.</p>
+            <form id="reviewForm" action="/submit_review" method="post">
+                <input type="text" id="review" name="review" required>
+                <div>
+                    <button type="button" onclick="postReview(document.getElementById('review').value, '{{selectedProduct}}')">Add review</button>
+                </div>
+            </form>
+        {% endif %}
+                <button type="button" onclick="returnToHomepage()">Return</button>
+    </div>
+</body>
+
+
+<script>
+
+    function adminResponse(review, reviewID){
+        console.log(review)
+        console.log(reviewID)
+        var adminReview = [review, reviewID]
+        console.log("your review variables are", adminReview)
+        document.cookie = "adminReview=" + JSON.stringify(adminReview) + "; path=/"
+        document.getElementById('respondForm').submit();
+        
+    }
+
+    function postReview(review, productid){
+        if (review==""){
+            console.log("Cannot submit empty review")
+        } else{
+            console.log(review)
+            console.log(productid)
+            var reviewVariables = [review, productid]
+            console.log("your review variables are:", reviewVariables)
+            document.cookie = "reviewValues=" + JSON.stringify(reviewVariables) + "; path=/";
+            document.getElementById('reviewForm').submit();
+        }
+    }
+
+    function loginToAccount(username, password) {
+        console.log("här är username och password: ",username, password);
+        var currentPage = window.location.href
+        var loginVariablesArray = [username, password, currentPage];
+        console.log(currentPage)
+
+        // You might want to check the condition correctly
+        if (loginVariablesArray.length > 0) {
+            document.cookie = "loginVariablesArray=" + JSON.stringify(loginVariablesArray) + "; path=/";
+            console.log("successfully created cookie in login to account");
+            document.getElementById('loginForm').submit();
+        }
+    }
+
+    function returnToHomepage(){
+        window.location.href = "/"
+    }
+
+
+</script>
