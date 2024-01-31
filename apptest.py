@@ -68,7 +68,7 @@ def productInformation():
     db.commit()
     cursor.close()
     cursor = db.cursor()
-    review_query = ("SELECT reviews.reviewid, reviews.review, users.username FROM reviews JOIN users ON reviews.userid=users.userid WHERE productid=%s;")
+    review_query = ("SELECT reviews.reviewid, reviews.review, users.username, reviews.response FROM reviews JOIN users ON reviews.userid=users.userid WHERE productid=%s;")
     cursor.execute(review_query, (selectedProduct,))
     review = cursor.fetchall()
     db.commit()
@@ -136,17 +136,13 @@ def submitresponse():
     adminVariable = json.loads(request.cookies.get("adminReview"))
     response = adminVariable[0]
     reviewID=adminVariable[1]
-
-
-
     #print(reviewVariables)
     db = mysql.connector.connect(**db_config)
     cursor = db.cursor()
 
-    response_query = """INSERT INTO reviews (response, reviewID, userid) 
-    VALUES (%s);"""
+    response_query = """UPDATE timsfränadatabas.reviews SET response=%s WHERE reviewID=%s"""
 
-    cursor.execute(response_query,(response,reviewID,1),)
+    cursor.execute(response_query, (response, reviewID))
 
     db.commit()
     cursor.close()

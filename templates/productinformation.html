@@ -11,28 +11,46 @@
     <div>
         {% for column in data %}
             <div>
-                <!--Loopar igenom alla attributer i prodcuts och visar dom --> 
+                <!-- Loop through all attributes in products and display them -->
                 <p>{{ column }}</p>
             </div> 
         {% endfor %}
 
-            {% for column in review %}
+        {% if not review and userid > 1 %}
+        <form id="reviewForm" action="/submit_review" method="post">
+            <label for="review">Review</label>
+            <input type="text" id="review" name="review" required>
         <div>
-            <p>{{ column[1:] }}</p>
+            <button type="button" onclick="postReview(document.getElementById('review').value, '{{selectedProduct}}')">Add review</button>
         </div>
-        {% if userid == 1 %}
-            <form id="respondForm{{ loop.index }}" action="/submit_response" method="post">
-                <input type="text" id="response{{ loop.index }}" name="response" required="required">
-                <div>
-                    <button type="button" onclick="adminResponse(document.getElementById('response{{ loop.index }}').value, '{{ column[0] }}')">Add review</button>
-                </div>
-            </form>
+        {% else %}
+
+        {% for column in review %}
+        <div>
+            <p>{{ column[1:3] }}</p>
+
+            {% if column[3] is defined and column[3] is not none %}
+            <b>{{ column[3] }} - Admin</b>
+            {% endif %}
+            
+            {% if userid == 1 and column[3] is none%}
+                <button type="button" onclick="createResponseForm('{{ column[0] }}')">Add response</button>
+                <div id="dynamicFormsContainer"></div>
+            {% endif %}
+        </div>
+        {% endfor %}
+
         {% endif %}
-    {% endfor %}
+        {% if userid > 1 %}
+                <form id="reviewForm" action="/submit_review" method="post">
+                    <label for="review">Review</label>
+                    <input type="text" id="review" name="review" required>
+                    <div>
+                        <button type="button" onclick="postReview(document.getElementById('review').value, '{{selectedProduct}}')">Add review</button>
+                    </div>
+                </form>
+        {% endif %}
 
-
-
-        
         {% if not logged_in %}
         <form id="loginForm" action="/login_authentication" method="post">
             <label for="usernameLOG">Username</label>
@@ -45,12 +63,6 @@
         </form>
         {% else %}
             <p>Welcome! You are now logged in.</p>
-            <form id="reviewForm" action="/submit_review" method="post">
-                <input type="text" id="review" name="review" required>
-                <div>
-                    <button type="button" onclick="postReview(document.getElementById('review').value, '{{selectedProduct}}')">Add review</button>
-                </div>
-            </form>
         {% endif %}
                 <button type="button" onclick="returnToHomepage()">Return</button>
     </div>
@@ -59,14 +71,39 @@
 
 <script>
 
+function createResponseForm(reviewID) {
+            var form = document.createElement('form');
+            form.id = 'respondForm_' + reviewID; // Use a unique ID for each form
+            form.action = '/submit_response';
+            form.method = 'post';
+
+            var input = document.createElement('input');
+            input.type = 'text';
+            input.id = 'response_' + reviewID;
+            input.name = 'response';
+            input.required = 'required';
+
+            var button = document.createElement('button');
+            button.type = 'button';
+            button.onclick = function () {
+                adminResponse(document.getElementById('response_' + reviewID).value, reviewID);
+            };
+            button.textContent = 'Add response';
+
+            form.appendChild(input);
+            form.appendChild(button);
+
+            // Append the form to the DOM
+            document.getElementById('dynamicFormsContainer').appendChild(form);
+        }
+
     function adminResponse(review, reviewID){
         console.log(review)
         console.log(reviewID)
         var adminReview = [review, reviewID]
         console.log("your review variables are", adminReview)
         document.cookie = "adminReview=" + JSON.stringify(adminReview) + "; path=/"
-        document.getElementById('respondForm').submit();
-        
+        document.getElementById('respondForm_' + reviewID).submit();        
     }
 
     function postReview(review, productid){
