@@ -9,13 +9,15 @@
 <body>
     <h1>Product Data</h1>
     <div>
-        {% for column in data %}
-            <div>
-                <!-- Loop through all attributes in products and display them -->
-                <p>{{ column }}</p>
-            </div> 
-        {% endfor %}
-
+        <div>
+            <h2>{{ data[1] }}</h2>
+            <p>Price: {{ data[2] }}</p>
+            <p>Country of origin: {{ data[3] }}</p>
+            <p>Stock: {{ data[4] }}</p>
+        </div>
+        <div>
+            <p>Rating: {{ avgrating }}</p>
+        </div>
         {% if not review and userid > 1 %}
         <form id="reviewForm" action="/submit_review" method="post">
             <label for="review">Review</label>
@@ -24,10 +26,12 @@
             <button type="button" onclick="postReview(document.getElementById('review').value, '{{selectedProduct}}')">Add review</button>
         </div>
         {% else %}
-
+        <div>
+            <h2>Reviews:</h2>
+        </div>
         {% for column in review %}
         <div>
-            <p>{{ column[1:3] }}</p>
+            <p>{{ column[1:3]|replace("(", "")|replace(")", "")|replace("'", "") }}</p>
 
             {% if column[3] is defined and column[3] is not none %}
             <b>{{ column[3] }} - Admin</b>
@@ -40,6 +44,7 @@
         </div>
         {% endfor %}
 
+
         {% endif %}
         {% if userid > 1 %}
                 <form id="reviewForm" action="/submit_review" method="post">
@@ -49,6 +54,22 @@
                         <button type="button" onclick="postReview(document.getElementById('review').value, '{{selectedProduct}}')">Add review</button>
                     </div>
                 </form>
+                
+                <form action="/action_page.php">
+                    <label for="rating">Choose a rating:</label>
+                    <select name="rating" id="rating">
+                      <option value="1">1 :( ⍟</option>
+                      <option value="2">2 :/ ⍟⍟</option>
+                      <option value="3">3 :| ⍟⍟⍟</option>
+                      <option value="4">4 :) ⍟⍟⍟⍟</option>
+                      <option value="5">5 :D ⍟⍟⍟⍟⍟</option>
+                    </select>
+                    <br><br>
+                    <div>
+                        <button type="button" onclick="postRating(document.getElementById('rating').value, '{{selectedProduct}}')">Submit rating</button>
+                    </div>
+                  </form>
+                  
         {% endif %}
 
         {% if not logged_in %}
@@ -70,6 +91,15 @@
 
 
 <script>
+
+function postRating(rating, productid){
+    console.log("funktionen funkade, du skickade en rating av : ", rating, " med productid: ", productid)
+    ratingArray = [rating, productid]
+    document.cookie = "ratingArray=" + JSON.stringify(loginVariablesArray) + "; path=/";
+    console.log("Created a cookie for ratingArray");
+    document.getElementById('rating').submit();
+    window.location.href ="/post_rating"
+}
 
 function createResponseForm(reviewID) {
             var form = document.createElement('form');

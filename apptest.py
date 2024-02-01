@@ -16,6 +16,7 @@ db_config = {
 # SELECT reviews.userid, reviews.review FROM timsfränadatabas.reviews WHERE productid=1;
 # 
 
+# SELECT AVG(rating) AS averagerating FROM ratings WHERE productid=1;
 
 # Homepage
 @app.route("/")
@@ -23,7 +24,7 @@ def index():
     if 'logged_in' not in session:
         session['logged_in'] = False
         session['username'] = ""
-        session['userid'] = ""
+        session['userid'] = 0
     # Querya databasen på alla produkter i products
     db = mysql.connector.connect(**db_config)
     cursor = db.cursor()
@@ -36,6 +37,9 @@ def index():
     # Skickar vidare det i en html template
     return render_template("index.html", data=data, logged_in=session['logged_in'])
 
+
+
+#Gör det möjligt att söka efter ordrar även om du inte är inloggad.
 @app.route("/search_order", methods=["POST"])
 def notLoggedInOrderSearch():
     searchOrderID = json.loads(request.cookies.get('orderSearchInput'))
@@ -52,6 +56,8 @@ def notLoggedInOrderSearch():
     
     return render_template("index2.html", result=result)
 
+
+#Skickar en vidare till sidan där man kan se kommentarer och admin svar angående prdukten som du valt.
 @app.route("/productInformation")
 def productInformation():
     if 'logged_in' not in session:
@@ -64,7 +70,7 @@ def productInformation():
     cursor = db.cursor()
     search_query = ("SELECT * FROM products WHERE productid=%s;")
     cursor.execute(search_query, (selectedProduct,))
-    data = cursor.fetchall()
+    data = cursor.fetchone()
     db.commit()
     cursor.close()
     cursor = db.cursor()
@@ -73,10 +79,24 @@ def productInformation():
     review = cursor.fetchall()
     db.commit()
     cursor.close()
+
+    db = mysql.connector.connect(**db_config)
+    cursor = db.cursor()
+
+    avg_rating_query = "SELECT AVG(rating) AS averagerating FROM ratings WHERE productid=%s;"
+    cursor.execute(avg_rating_query, (selectedProduct,))
+    avgrating = cursor.fetchone()
+    avgrating=avgrating[0]
+    db.commit()
+    cursor.close()
+
     db.close()
 
-    return render_template("productinformation.html", data=data, review=review, selectedProduct=selectedProduct, logged_in=session['logged_in'], userid=session['userid'])
+    print("data ------------ > ",data, type(data))
 
+    return render_template("productinformation.html", data=data, review=review, selectedProduct=selectedProduct, logged_in=session['logged_in'], userid=session['userid'], avgrating=avgrating)
+
+#Check för att se om man är inloggad.
 @app.route("/login_authentication", methods=["POST"])
 def login_to_account():
     loginVariablesArray = json.loads(request.cookies.get("loginVariablesArray"))
@@ -95,7 +115,7 @@ def login_to_account():
     db.commit()
     cursor.close()
     db.close()
-    
+
     if result:
         print(f"Username and password combo found")
 
@@ -104,9 +124,10 @@ def login_to_account():
         
         search_query = "SELECT userid FROM users WHERE `username`=%s AND `password`=%s;"
         cursor.execute(search_query, (username, password))
-   
         userid = cursor.fetchone()
+        print("------------> user id  :  ",userid)
         useridToNotTuple = userid[0]
+        print("------------> to not tuple:  ",useridToNotTuple, "och den har typen : ",type(useridToNotTuple))
         db.commit()
         cursor.close()
         db.close()
@@ -114,7 +135,6 @@ def login_to_account():
         session['userid'] = useridToNotTuple
         session['username'] = username
         session['logged_in'] = True
-        
         print(currentPage)
         return redirect(currentPage)
     
@@ -125,12 +145,13 @@ def login_to_account():
     
     
 
-
+#Knapp för att logga ut om man är inloggad och den kommer endast fram ifall man själv är inloggad.
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect(url_for('index'))
 
+#Form för admin ska kunna besvara kommentarerna för produkterna.
 @app.route("/submit_response", methods=["POST"])
 def submitresponse():
     adminVariable = json.loads(request.cookies.get("adminReview"))
@@ -150,7 +171,7 @@ def submitresponse():
 
     return redirect(url_for("productInformation"))
 
-
+#Knapp och form för att ge en kommentar på produkten man är inklickad på. Du behöver även vara inloggad för att lägga kommentaren 
 @app.route("/submit_review", methods=["POST"])
 def postreview():
     reviewVariables = json.loads(request.cookies.get("reviewValues"))
@@ -174,9 +195,28 @@ def postreview():
 
     return redirect(url_for("productInformation"))
 
+@app.route("/submit_rating", methods=["POST"])
+def postrating():
+    db = mysql.connector.connect(**db_config)
+    cursor = db.cursor()
+
+    ratingArray = json.loads(request.cookies.get("reviewValues"))
+
+    rating = ratingArray[0]
+    productid = ratingArray[1]
+
+    fetch_ratings = """SELECT FROM reviews (rating) 
+    VALUES (%s);"""
+
+    cursor.execute(fetch_ratings,())
+    db.commit()
+    cursor.close()
+    db.close()
+
+    return redirect(url_for("productInformation"))
 
     
-
+#Funktion för att skapa användare på hemsidan med användarnamn, mail och lösenord.
 @app.route("/submit_user", methods=["POST"])
 def create_account():
     userVariablesArray = json.loads(request.cookies.get("userVariablesArray"))
@@ -200,6 +240,8 @@ def create_account():
 
     return redirect(url_for("index"))
 
+
+#Funktion som plockar upp din köphistorik som gjorts med det inloggade kontot.
 @app.route("/purchasehistory")
 def purchasehistory():
     db = mysql.connector.connect(**db_config)
@@ -220,7 +262,8 @@ def order():
 
 
 
-
+#När man klickar på checkout så kommer man vidare och får fylla i mailadress adress och telefonnummer
+#Denna funtion gör även lite annat som att minska lagret med ett, skapar ordern och skapar ett kvitto.
 @app.route("/submit_order", methods=["POST"])
 def submit_order():
     if session['logged_in']:
@@ -272,6 +315,17 @@ def submit_order():
             print("Passed receipts")
             db.commit()
             cursor.close()
+
+            # functions like a decrease-in-stock for the database
+            db = mysql.connector.connect(**db_config)
+            cursor = db.cursor()
+            stock_query = "UPDATE products SET stock = stock - 1 WHERE productid=%s;"
+            print("stock decreased by 1")
+            cursor.execute(stock_query, (productid,))
+            db.commit()
+            cursor.close()
+
+
             db.close()
 
         # Konverterar input från formulär till python variabler
