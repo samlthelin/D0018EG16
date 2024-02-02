@@ -6,26 +6,31 @@
     <title>Product Data</title>
 </head>
 <body>
-    <h1>Product Data</h1>
+    <h1>Plunder</h1>
     <!--Loopar igenom alla products i product table--> 
     <div>
         {% for column in data %}
             <div>
                 <!--Loopar igenom alla attributer i prodcuts och visar dom --> 
                 {% for row in column %}
+                    
                     <p>{{ row }}</p>
                 {% endfor %}
 
    
                 <!--Skapar en knapp vilket fångar upp productid och skickar vidare den till order formulär --> 
-                <button type="button" onclick="addToCart('{{ column[0] }}', '{{ column[1] }}', '{{ column[2] }}', '{{ column[3] }}', '{{ column[4] }}')">Add to cart</button>            
-                <button type="button" onclick="redirectToProductInformation('{{ column[0] }}')">Product information</button>
+                {% if column[5] > 0 %}
+                    <button type="button" onclick="addToCart('{{ column[0] }}', '{{ column[1] }}', '{{ column[2] }}', '{{ column[3] }}', '{{ column[4] }}')">Plunder me booty</button>            
+                {% else %}
+                    <p>out of stock</p>
+                {% endif %}
+                <button type="button" onclick="redirectToProductInformation('{{ column[0] }}')">Treasure Tale</button>
             </div> 
         {% endfor %}
     </div>
 
     <div>
-        <button type="button" onclick="redirectToOrderPage()">Checkout</button>
+        <button type="button" onclick="redirectToOrderPage()">Droppin me' anchor</button>
     </div>
     {% if not logged_in %}
         <div>
@@ -37,7 +42,7 @@
                 <label for="email">Email</label>
                 <input type="text" id="email" name="email" required> 
                 <div>
-                    <button type="submit" onclick="handleValuesFromForm(0)">Create account</button>
+                    <button type="submit" onclick="handleValuesFromForm(0)">Join the crew</button>
                 </div>
             </form>
         </div>
@@ -49,26 +54,26 @@
                 <label for="passwordLOG">Password</label>
                 <input type="text" id="passwordLOG" name="passwordLOG" required>
                 <div>
-                    <button type="submit" onclick="handleValuesFromForm(1)">Login</button>
+                    <button type="submit" onclick="handleValuesFromForm(1)">Take the helm</button>
                 </div>
             </form>
         </div>
         <div>
             <form id="searchForm" action="/search_order" method="post">
-            <label for="orderSearchInput">Search for order by orderID</label>
+            <label for="orderSearchInput">Scour the seas by orderID</label>
             <input type="text" id="orderSearchInput" name="orderSearchInput" required>
             <div>
-                <button type="submitOrderSearch" onclick="nonLoggedOrderSearch()">Search</button>
+                <button type="submitOrderSearch" onclick="nonLoggedOrderSearch()">Scour</button>
             </div>
             </form>
         </div>
 
         
     {% else %}
-        <p>Welcome! You are now logged in.</p>
-        <button type="submit" onclick="logout()">Logout</button>
+        <p>Welcome to the crew!</p>
+        <button type="submit" onclick="logout()">Walk the plank</button>
 
-        <button type="button" onclick="purchasehistory()">Show purchase history</button>
+        <button type="button" onclick="purchasehistory()">Reveal Me Plundered Booty</button>
     {% endif %}
     <!--Hämtar nuvarande url, lägger till /order och productid --> 
     <script>

@@ -7,7 +7,7 @@
 </head>
 
 <body>
-    <h1>Product Data</h1>
+    <h1>Booty Briefs and Buccaneer Tales</h1>
     <div>
         <div>
             <h2>{{ data[1] }}</h2>
@@ -20,14 +20,14 @@
         </div>
         {% if not review and userid > 1 %}
         <form id="reviewForm" action="/submit_review" method="post">
-            <label for="review">Review</label>
+            <label for="review">Tale</label>
             <input type="text" id="review" name="review" required>
         <div>
-            <button type="button" onclick="postReview(document.getElementById('review').value, '{{selectedProduct}}')">Add review</button>
+            <button type="button" onclick="postReview(document.getElementById('review').value, '{{selectedProduct}}')">Drop yer tale</button>
         </div>
         {% else %}
         <div>
-            <h2>Reviews:</h2>
+            <h2>Buccaneer Tale:</h2>
         </div>
         {% for column in review %}
         <div>
@@ -38,7 +38,7 @@
             {% endif %}
             
             {% if userid == 1 and column[3] is none%}
-                <button type="button" onclick="createResponseForm('{{ column[0] }}')">Add response</button>
+                <button type="button" onclick="createResponseForm('{{ column[0] }}')">Drop yer late</button>
                 <div id="dynamicFormsContainer"></div>
             {% endif %}
         </div>
@@ -46,29 +46,30 @@
 
 
         {% endif %}
-        {% if userid > 1 %}
+        {% if userid > 1 and review %}
                 <form id="reviewForm" action="/submit_review" method="post">
-                    <label for="review">Review</label>
+                    <label for="review">Tale</label>
                     <input type="text" id="review" name="review" required>
                     <div>
-                        <button type="button" onclick="postReview(document.getElementById('review').value, '{{selectedProduct}}')">Add review</button>
+                        <button type="button" onclick="postReview(document.getElementById('review').value, '{{selectedProduct}}')">Drop yer tale</button>
                     </div>
                 </form>
-                
-                <form action="/action_page.php">
+            {% if ratingToF == 0%}
+                <form id="ratingForm" action="/submitRating" method="post">
                     <label for="rating">Choose a rating:</label>
                     <select name="rating" id="rating">
-                      <option value="1">1 :( ⍟</option>
-                      <option value="2">2 :/ ⍟⍟</option>
-                      <option value="3">3 :| ⍟⍟⍟</option>
-                      <option value="4">4 :) ⍟⍟⍟⍟</option>
-                      <option value="5">5 :D ⍟⍟⍟⍟⍟</option>
+                      <option value="1">1</option>
+                      <option value="2">2</option>
+                      <option value="3">3</option>
+                      <option value="4">4</option>
+                      <option value="5">5</option>
                     </select>
                     <br><br>
                     <div>
                         <button type="button" onclick="postRating(document.getElementById('rating').value, '{{selectedProduct}}')">Submit rating</button>
                     </div>
-                  </form>
+                </form>
+            {% endif %}
                   
         {% endif %}
 
@@ -79,13 +80,13 @@
             <label for="passwordLOG">Password</label>
             <input type="text" id="passwordLOG" name="passwordLOG" required>
             <div>
-                <button type="button" onclick="loginToAccount(document.getElementById('usernameLOG').value, document.getElementById('passwordLOG').value)">Login</button>
+                <button type="button" onclick="loginToAccount(document.getElementById('usernameLOG').value, document.getElementById('passwordLOG').value)">Take the helm</button>
             </div>
         </form>
         {% else %}
-            <p>Welcome! You are now logged in.</p>
+            <p>Welcome to the crew!.</p>
         {% endif %}
-                <button type="button" onclick="returnToHomepage()">Return</button>
+                <button type="button" onclick="returnToHomepage()">Return to port</button>
     </div>
 </body>
 
@@ -95,10 +96,10 @@
 function postRating(rating, productid){
     console.log("funktionen funkade, du skickade en rating av : ", rating, " med productid: ", productid)
     ratingArray = [rating, productid]
-    document.cookie = "ratingArray=" + JSON.stringify(loginVariablesArray) + "; path=/";
+    document.cookie = "ratingArray=" + JSON.stringify(ratingArray) + "; path=/";
     console.log("Created a cookie for ratingArray");
-    document.getElementById('rating').submit();
-    window.location.href ="/post_rating"
+    document.getElementById('ratingForm').submit();
+    //window.location.href ="/submit_rating"
 }
 
 function createResponseForm(reviewID) {

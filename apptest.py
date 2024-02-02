@@ -31,6 +31,8 @@ def index():
     cursor.execute("SELECT * FROM products;")
     # SELECT products.*, reviews.userid, reviews.review FROM timsfränadatabas.products JOIN timsfränadatabas.reviews ON products.productid=reviews.productid;
     data = cursor.fetchall()
+    temp = data[0]
+    print(temp[5])
     db.commit()
     cursor.close()
     db.close()
@@ -54,7 +56,7 @@ def notLoggedInOrderSearch():
     cursor.close()
     db.close()
     
-    return render_template("index2.html", result=result)
+    return render_template("purchaseinformation.html", result=result)
 
 
 #Skickar en vidare till sidan där man kan se kommentarer och admin svar angående prdukten som du valt.
@@ -63,7 +65,7 @@ def productInformation():
     if 'logged_in' not in session:
         session['logged_in'] = False
         session['username'] = ""
-        session['userid'] = ""
+        session['userid'] = 0
     selectedProduct = json.loads(request.cookies.get("selectedProduct"))
     print("you selected product:", selectedProduct)
     db = mysql.connector.connect(**db_config)
@@ -90,11 +92,22 @@ def productInformation():
     db.commit()
     cursor.close()
 
+    #SELECT COUNT(*) FROM ratings WHERE userid = 'your_user_id';
+
+    db = mysql.connector.connect(**db_config)
+    cursor = db.cursor()
+
+    rating_query = "SELECT COUNT(*) FROM ratings WHERE userid = %s;"
+    userid = session['userid']
+    cursor.execute(rating_query,(userid,))
+    ratingToF = cursor.fetchone()
+    db.commit()
+    cursor.close()
     db.close()
 
     print("data ------------ > ",data, type(data))
 
-    return render_template("productinformation.html", data=data, review=review, selectedProduct=selectedProduct, logged_in=session['logged_in'], userid=session['userid'], avgrating=avgrating)
+    return render_template("productinformation.html", ratingToF = ratingToF,data=data, review=review, selectedProduct=selectedProduct, logged_in=session['logged_in'], userid=session['userid'], avgrating=avgrating)
 
 #Check för att se om man är inloggad.
 @app.route("/login_authentication", methods=["POST"])
@@ -195,20 +208,19 @@ def postreview():
 
     return redirect(url_for("productInformation"))
 
-@app.route("/submit_rating", methods=["POST"])
+@app.route("/submitRating", methods=["POST"])
 def postrating():
     db = mysql.connector.connect(**db_config)
     cursor = db.cursor()
 
-    ratingArray = json.loads(request.cookies.get("reviewValues"))
+    ratingArray = json.loads(request.cookies.get("ratingArray"))
 
     rating = ratingArray[0]
     productid = ratingArray[1]
+    userid = session['userid']
 
-    fetch_ratings = """SELECT FROM reviews (rating) 
-    VALUES (%s);"""
-
-    cursor.execute(fetch_ratings,())
+    fetch_ratings = "INSERT INTO ratings (userid, productid, rating) VALUES (%s,%s,%s)"
+    cursor.execute(fetch_ratings,(userid,productid,rating,))
     db.commit()
     cursor.close()
     db.close()
@@ -257,7 +269,18 @@ def purchasehistory():
 @app.route("/order/")
 def order():
     cartArray = json.loads(request.cookies.get("cartArray"))
-    return render_template("order_form.html", cartArray=cartArray)
+    totalPrice = 0
+
+    #print(type(cartArray[0]))
+    nycoolvariabel = cartArray[0]
+    #print(nycoolvariabel)
+
+    for nycoolvariabelIGEN in cartArray:
+        totalPrice += int(nycoolvariabelIGEN[2])
+
+    print(totalPrice)
+    
+    return render_template("order_form.html", totalPrice=totalPrice, cartArray=cartArray)
 
 
 
@@ -281,18 +304,28 @@ def submit_order():
         for cartArrayIndex in cartArray:
             productid = int(cartArrayIndex[0])
             productname = cartArrayIndex[1]
-            productcost = int(cartArrayIndex[2])
             productimagefilepath = cartArrayIndex[3]
             productcountryoforigin = cartArrayIndex[4]
             kvittoid = random.randint(1000, 9999)
 
-            print(
-                productid,
-                productname,
-                productcost,
-                productimagefilepath,
-                productcountryoforigin
-            )
+            db = mysql.connector.connect(**db_config)
+            cursor = db.cursor()
+
+            retrieve_query = """SELECT products.productcost	FROM timsfränadatabas.products WHERE products.productid=%s"""
+            cursor.execute(retrieve_query,(productid,))
+            
+
+            result = cursor.fetchone()
+            priceresult=""
+            for i in result:
+                priceresult+=str(i)
+            priceresult=int(priceresult)
+            print(priceresult)
+
+            db.commit()
+            cursor.close()
+            db.close()
+
             db = mysql.connector.connect(**db_config)
             cursor = db.cursor()
 
@@ -307,7 +340,7 @@ def submit_order():
                     kvittoorderid,
                     productid,
                     productname,
-                    productcost,
+                    priceresult,
                     productimagefilepath,
                     productcountryoforigin,
                 ),
@@ -324,8 +357,6 @@ def submit_order():
             cursor.execute(stock_query, (productid,))
             db.commit()
             cursor.close()
-
-
             db.close()
 
         # Konverterar input från formulär till python variabler
@@ -356,13 +387,24 @@ def submit_order():
         # Commitar databas ändringarna och stänger db connection för att undvika felaktiga cursors
         db.commit()
         cursor.close()
+        
+
+        # db = mysql.connector.connect(**db_config)
+        # cursor = db.cursor()
+        
+        # username_query = "SELECT username FROM users WHERE userid=%s;"
+        # cursor.execute(stock_query, (,))
+        # username=cursor.fetchone()
+        # print(username)
+        # db.commit()
+        # cursor.close()
+
         db.close()
 
-        db = mysql.connector.connect(**db_config)
-        cursor = db.cursor()
+        username=session['username']
 
         # Går tillbaka till index
-        return redirect(url_for("index"))
+        return render_template("tack.html", orderid=orderid, username=username)
 
     except Exception as e:
         # Fångar problem vid uppladdning till databas
