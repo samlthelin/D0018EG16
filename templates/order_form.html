@@ -9,8 +9,9 @@
     <h1>Order Form</h1>
     <!--Simpel form där man fyller i email etc, productid tas med i formen men hålls hidden för användare --> 
     <!--Skickas vidare till /submit_order --> 
-    <form action="/submit_order" method="post">
+    <form action="/submitorder" method="post">
         <p>Your total price is : {{ totalPrice }} doubloons</p>
+        <input type="hidden" name="cartArray" value="{{ cartArray|tojson|safe }}"
         <input type="hidden" name="productid" value="{{ productid }}">
         <label for="customeremail">Email:</label>
         <input type="email" id="customeremail" name="customeremail" required>

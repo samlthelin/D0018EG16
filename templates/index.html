@@ -20,7 +20,15 @@
    
                 <!--Skapar en knapp vilket fångar upp productid och skickar vidare den till order formulär --> 
                 {% if column[5] > 0 %}
-                    <button type="button" onclick="addToCart('{{ column[0] }}', '{{ column[1] }}', '{{ column[2] }}', '{{ column[3] }}', '{{ column[4] }}')">Plunder me booty</button>            
+                    <form action="/add_to_cart" method="post">
+                        <input type="hidden" name="productid" value="{{ column[0] }}">
+                        <input type="hidden" name="productname" value="{{ column[1] }}">
+                        <input type="hidden" name="productcost" value="{{ column[2] }}">
+                        <input type="hidden" name="productimagefilepath" value="{{ column[3] }}">
+                        <input type="hidden" name="productcountryoforigin" value="{{ column[4] }}">
+                        <input type="hidden" name="stock" value="{{ column[5] }}">
+                        <button type="submit">Plunder me booty</button>            
+                    </form>
                 {% else %}
                     <p>out of stock</p>
                 {% endif %}
@@ -107,12 +115,13 @@
         
         function redirectToOrderPage() {
             // Use cookies to store cartArray
-            if (cartArray.length > 0) {
-                document.cookie = "cartArray=" + JSON.stringify(cartArray) + "; path=/";
-                window.location.href = "/order/"; //Går till (Nuvarande URL) + /order == 127.0.0.1:5000/order. order = order_html
-            } else {
-                alert("Invalid Product ID");
-            }
+            // if (cartArray.length > 0) {
+            //     document.cookie = "cartArray=" + JSON.stringify(cartArray) + "; path=/";
+            //     window.location.href = "/order/"; //Går till (Nuvarande URL) + /order == 127.0.0.1:5000/order. order = order_html
+            // } else {
+            //     alert("Invalid Product ID");
+            // }
+            window.location.href = "/order/";
         }
 
         function handleValuesFromForm(choice) {
