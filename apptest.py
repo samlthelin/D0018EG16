@@ -40,6 +40,29 @@ def index():
     return render_template("index.html", data=data, logged_in=session['logged_in'])
 
 
+@app.route('/add_to_cart', methods=['POST'])
+def add_to_cart():
+    
+    productid=request.form['productid']
+
+    db = mysql.connector.connect(**db_config)
+    cursor = db.cursor()
+
+    if session['logged_in']:
+        userid = session['userid']
+        cartref = userid
+    else:
+        userid = 0
+        cartref = random.randint(1000, 9999)
+
+    insertCartQuery="INSERT INTO cart (productid, customerid) VALUES (%s, %s)"
+    cursor.execute(insertCartQuery, (productid,userid),)
+
+    db.commit()
+    cursor.close()
+    db.close()
+
+    return redirect(url_for("index"))
 
 #Gör det möjligt att söka efter ordrar även om du inte är inloggad.
 @app.route("/search_order", methods=["POST"])
@@ -268,21 +291,120 @@ def purchasehistory():
 # Beställnings formulär
 @app.route("/order/")
 def order():
-    cartArray = json.loads(request.cookies.get("cartArray"))
-    totalPrice = 0
 
-    #print(type(cartArray[0]))
-    nycoolvariabel = cartArray[0]
-    #print(nycoolvariabel)
+    db = mysql.connector.connect(**db_config)
+    cursor = db.cursor()
 
-    for nycoolvariabelIGEN in cartArray:
-        totalPrice += int(nycoolvariabelIGEN[2])
+    # cartArray = json.loads(request.cookies.get("cartArray"))
+    # totalPrice = 0
 
-    print(totalPrice)
+    # for nycoolvariabelIGEN in cartArray:
+    #     totalPrice += int(nycoolvariabelIGEN[2])
+
+    # print(totalPrice)
+    userid = session['userid']
+    selquery="SELECT productid, COUNT(*) AS item_count FROM cart WHERE customerid=%s GROUP BY productid;"
+    data = cursor.execute(selquery,(userid,))
+    res = cursor.fetchall()
+    temp=res
+    print(res)
+    amountofproducts = len(res)
+    lst=[]
+    for i in res:
+        forquery="SELECT products.productcost FROM timsfränadatabas.products WHERE productid=%s;"
+        cursor.execute(forquery,(i[0],))
+        res = cursor.fetchone()
+        print("the price of product ",i[0]," is ",res[0], " and the total price is then: ", res[0]*i[1])
+        lst.append(res[0]*i[1])
+
+    print(lst)
+    totalprice=0
+
+    for i in lst:
+        totalprice=totalprice+i
+
     
-    return render_template("order_form.html", totalPrice=totalPrice, cartArray=cartArray)
+    db.commit()
+    cursor.close()
+    db.close()
+    print("order -- temp consists of :",temp," and the type is: ", type(temp), type(temp[0]))
+    return render_template("order_form.html", totalPrice=totalprice, cartArray=temp)
 
 
+@app.route("/submitorder",methods=["POST"])
+def submitorder():
+    print("in submit order")
+    if session['logged_in']:
+        userid = session['userid']
+    else:
+        userid = 0
+    
+    kvittoorderid = random.randint(1000, 9999)
+    cartArray=request.form['cartArray']
+    cartArray = json.loads(cartArray)
+    customeremail = request.form.get("customeremail")
+    customeradress = request.form.get("customeradress")
+    customernumber = request.form.get("customerphone")
+    
+    print(cartArray, len(cartArray), type(cartArray), type(cartArray[0]))
+    db = mysql.connector.connect(**db_config)
+    cursor = db.cursor()
+    
+    for i in cartArray:
+        qry="SELECT * FROM timsfränadatabas.products WHERE productid=%s;"
+        cursor.execute(qry,(i[0],))
+        result=cursor.fetchone()
+        print(result,"for ", i, i[0])
+        s=1
+        while(s<=i[1]):
+            productid = int(result[0])
+            productname = result[1]
+            priceresult=result[2]
+            productimagefilepath = result[3]
+            productcountryoforigin = result[4]
+            kvittoid = random.randint(1000, 9999)
+
+            insert_query = """
+                INSERT INTO `receipts` (kvittoid, kvittoorderid, productid, productname, productcost, productimagefilepath, productcountryoforigin)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """
+            cursor.execute(
+                insert_query,
+                (
+                    kvittoid,
+                    kvittoorderid,
+                    productid,
+                    productname,
+                    priceresult,
+                    productimagefilepath,
+                    productcountryoforigin,
+                ),
+            )
+            db.commit()
+            stock_query = "UPDATE products SET stock = stock - 1 WHERE productid=%s;"
+            print("stock decreased by 1")
+            cursor.execute(stock_query, (productid,))
+            db.commit()
+            s+=1
+
+
+    orderid = random.randint(1000, 9999)
+    insert_query = """
+        INSERT INTO orders (orderid, kvittoorderid, customeremail, customeradress, customernumber, userid)
+        VALUES (%s, %s, %s, %s, %s, %s)
+    """
+    cursor.execute(
+        insert_query,
+        (orderid, kvittoorderid, customeremail, customeradress, customernumber, userid),
+    )
+    db.commit()
+    delquery="DELETE FROM cart WHERE customerid=%s;"
+    cursor.execute(delquery,(userid,))
+    db.commit()
+    cursor.close()
+    db.close()
+    username=session['username']
+    return render_template("tack.html", orderid=orderid, username=username)
 
 
 #När man klickar på checkout så kommer man vidare och får fylla i mailadress adress och telefonnummer
