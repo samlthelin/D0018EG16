@@ -11,15 +11,43 @@
     <div>
         {% for column in data %}
             <div>
-                <!--Loopar igenom alla attributer i prodcuts och visar dom --> 
-                {% for row in column %}
-                    
-                    <p>{{ row }}</p>
-                {% endfor %}
-
-   
-                <!--Skapar en knapp vilket fångar upp productid och skickar vidare den till order formulär --> 
-                {% if column[5] > 0 %}
+                <!--Loopar igenom alla attributer i products och visar dom -->
+                {% if column[6]==1 and userid!=1%}
+                    <h2>{{ column[1] }}</h2>
+                    <p>Price: {{ column[2] }}</p>
+                    <p>Country of origin: {{ column[4] }}</p>
+                    <p>Stock: {{ column[5] }}</p>
+                    {% if userid == 1%}
+                        <p>Visible: {{ column[6] }}</p>
+                    {% endif %}
+                    <button type="button" onclick="redirectToProductInformation('{{ column[0] }}')">Product information</button>
+                    {% if column[5] > 0  and column[5]!=column[7] %}
+                        <form action="/add_to_cart" method="post">
+                            <input type="hidden" name="productid" value="{{ column[0] }}">
+                            <input type="hidden" name="productname" value="{{ column[1] }}">
+                            <input type="hidden" name="productcost" value="{{ column[2] }}">
+                            <input type="hidden" name="productimagefilepath" value="{{ column[3] }}">
+                            <input type="hidden" name="productcountryoforigin" value="{{ column[4] }}">
+                            <input type="hidden" name="stock" value="{{ column[5] }}">
+                            <button type="submit">Add to cart</button>
+                        </form>
+                    {%elif column[5] > 0  and column[5]==column[7] %}
+                        <p>Reserved amount equal to stock</p>
+                    {% else %}
+                        <p>out of stock</p>
+                    {% endif %}
+                {% endif %}
+                
+                <!--Admin view-->
+                {% if userid==1 %}
+                    <h2>{{ column[1] }}</h2>
+                    <p>Price: {{ column[2] }}</p>
+                    <p>Country of origin: {{ column[4] }}</p>
+                    <p>Stock: {{ column[5] }}</p>
+                    {% if userid == 1%}
+                        <p>Visible: {{ column[6] }}</p>
+                    {% endif %}
+                    <button type="button" onclick="redirectToProductInformation('{{ column[0] }}')">Product information</button>
                     <form action="/add_to_cart" method="post">
                         <input type="hidden" name="productid" value="{{ column[0] }}">
                         <input type="hidden" name="productname" value="{{ column[1] }}">
@@ -27,18 +55,38 @@
                         <input type="hidden" name="productimagefilepath" value="{{ column[3] }}">
                         <input type="hidden" name="productcountryoforigin" value="{{ column[4] }}">
                         <input type="hidden" name="stock" value="{{ column[5] }}">
-                        <button type="submit">Plunder me booty</button>            
+                        <button type="submit">Add to cart</button>            
                     </form>
-                {% else %}
+                    {% if column[6] == 1 and column[5] == 0 %}
                     <p>out of stock</p>
+                    {% endif %}
                 {% endif %}
-                <button type="button" onclick="redirectToProductInformation('{{ column[0] }}')">Treasure Tale</button>
-            </div> 
+                
+
+                <!--Skapar en knapp vilket fångar upp productid och skickar vidare den till order formulär --> 
+                <!-- {% if column[6] == 1 and column[5] > 0 %}
+                    <form action="/add_to_cart" method="post">
+                        <input type="hidden" name="productid" value="{{ column[0] }}">
+                        <input type="hidden" name="productname" value="{{ column[1] }}">
+                        <input type="hidden" name="productcost" value="{{ column[2] }}">
+                        <input type="hidden" name="productimagefilepath" value="{{ column[3] }}">
+                        <input type="hidden" name="productcountryoforigin" value="{{ column[4] }}">
+                        <input type="hidden" name="stock" value="{{ column[5] }}">
+                        <button type="submit">Add to cart</button>            
+                    </form>
+                {% elif column[6] == 1 and column[5] == 0 %}
+                    <p>out of stock</p>
+                {% endif %} -->
+
+                {% if userid == 1 %}
+                    <button type="button" onclick="toggleVisibility('{{ column[0] }}','{{ column[6]}}')">Toggle visibility</button>
+                {% endif %}
+                </div> 
         {% endfor %}
     </div>
 
     <div>
-        <button type="button" onclick="redirectToOrderPage()">Droppin me' Anchor</button>
+        <button type="button" onclick="redirectToOrderPage()">Checkout</button>
     </div>
     {% if not logged_in %}
         <div>
@@ -50,7 +98,7 @@
                 <label for="email">Email</label>
                 <input type="text" id="email" name="email" required> 
                 <div>
-                    <button type="submit" onclick="handleValuesFromForm(0)">Join the crew</button>
+                    <button type="submit" onclick="handleValuesFromForm(0)">Sign up</button>
                 </div>
             </form>
         </div>
@@ -62,7 +110,7 @@
                 <label for="passwordLOG">Password</label>
                 <input type="text" id="passwordLOG" name="passwordLOG" required>
                 <div>
-                    <button type="submit" onclick="handleValuesFromForm(1)">Take the helm</button>
+                    <button type="submit" onclick="handleValuesFromForm(1)">Log in</button>
                 </div>
             </form>
         </div>
@@ -71,7 +119,7 @@
             <label for="orderSearchInput">Scour the seas by orderID</label>
             <input type="text" id="orderSearchInput" name="orderSearchInput" required>
             <div>
-                <button type="submitOrderSearch" onclick="nonLoggedOrderSearch()">Scour</button>
+                <button type="submitOrderSearch" onclick="nonLoggedOrderSearch()">Search for ordered product</button>
             </div>
             </form>
         </div>
@@ -79,14 +127,19 @@
         
     {% else %}
         <p>Welcome to the crew!</p>
-        <button type="submit" onclick="logout()">Walk the plank</button>
+        <button type="submit" onclick="logout()">Sign out</button>
 
-        <button type="button" onclick="purchasehistory()">Reveal Me Plundered Booty</button>
+        <button type="button" onclick="purchasehistory()">Show order history</button>
     {% endif %}
     <!--Hämtar nuvarande url, lägger till /order och productid --> 
-    <script>
+    {% if userid == 1 %}
+    <div>
+        <button type="adminButton" onclick="adminAddProduct()">Add a new product</button>
+        <button type="adminButton" onclick="adminOrders()">Handle orders</button>
+    </div>
+    {% endif %}
 
-        
+    <script>
         //TODO. Skapa funktion för att lägga till i varukorg
         //Ändra så att redirectToOrderPage tar emot varukorg array
         var cartArray = [];
@@ -163,13 +216,26 @@
         }
         }
 
+        function toggleVisibility(id, visibilityStatus){
+            toggleArray=[id,visibilityStatus]
+            document.cookie = "productid=" + JSON.stringify(toggleArray) + "; path=/";
+            window.location.href = "/toggleVisibility";
+        }
+
         function logout(){
             window.location.href = "/logout"
         }
 
         function purchasehistory(){
             window.location.href = "/purchasehistory"
+        }
+        
+        function adminAddProduct(){
+            window.location.href = "/adminAddProduct"
+        }
 
+        function adminOrders(){
+            window.location.href = "/adminOrder"
         }
     </script>
 </body>

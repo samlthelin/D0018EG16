@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Form</title>
+</head>
+<body>
+    <h1>Add products</h1>
+    <form action="/submitproduct" method="post">
+        <p> Productname : </p>
+        <input type="text" id="productname" name="productname" >
+        <p> productcost : </p>
+        <input type="number" id="productcountryoforigin" name="productcost" min="0" oninput="validity.valid||(value='');">
+        <p> Product country : </p>
+        <input type="text" id="productcountryoforigin" name="productcountryoforigin" >
+        <p> Product stock : </p>
+        <input type="number" id="stock" name="stock" min="0" oninput="validity.valid||(value='');">
+        <button type="submit">Submit product</button>
+    </form>
+
+    <button type="button" onclick="returnToHomepage()">Return to port</button>
+
+
+    
+</body>
+
+<script>
+    function returnToHomepage(){
+        window.location.href = "/"
+    }
+
+</script>
+</html>

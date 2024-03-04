@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TEST</title>
+</head>
+
+<body>
+    <h1>Me' Booty</h1>
+    <!--Loopar igenom alla kvittoorderid med hjälp av orderid --> 
+    <div>
+        {% for result in result %}
+            <div>
+                <!--Loopar igenom alla attributer i prodcuts och visar dom --> 
+                <div>
+                    <p>OrderID: {{result[0]}}, Email: {{result[1]}}, Order date: {{result[5]}}, Products: {{result[6]}}, Price: {{result[7]}}, Status: {{result[8]}}</p>
+                    <button type="adminButtonConfirm" onclick="adminConfirm('{{result[0]}}')">Confirm</button>
+                    <button type="adminButtonDeny" onclick="adminDeny('{{result[0]}}')">Deny</button>
+                </div>
+            </div>
+            
+        {% endfor %}
+        <button type="button" onclick="returnToHomepage()">Return to port</button>
+    </div>
+    
+</body>
+
+<script>
+    function returnToHomepage(){
+        window.location.href = "/"
+    }
+    function adminConfirm(id){
+        console.log(id)
+        document.cookie = "adminConfirmCookie=" + JSON.stringify(id); + "; path=/";
+        window.location.href = "/adminConfirm"
+        
+    }
+    function adminDeny(id){
+        console.log(id)
+        document.cookie = "adminDenyCookie=" + JSON.stringify(id); + "; path=/";
+        window.location.href = "/adminDeny"
+    }
+</script>

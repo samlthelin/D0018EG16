@@ -2,6 +2,7 @@ from flask import Flask, render_template, g, request, redirect, url_for, session
 import json
 import mysql.connector
 import random
+from datetime import date
 
 app = Flask(__name__)
 app.secret_key = 'hej'
@@ -32,12 +33,12 @@ def index():
     # SELECT products.*, reviews.userid, reviews.review FROM timsfränadatabas.products JOIN timsfränadatabas.reviews ON products.productid=reviews.productid;
     data = cursor.fetchall()
     temp = data[0]
-    print(temp[5])
+    print("samuels print", )
     db.commit()
     cursor.close()
     db.close()
     # Skickar vidare det i en html template
-    return render_template("index.html", data=data, logged_in=session['logged_in'])
+    return render_template("index.html", data=data, logged_in=session['logged_in'], userid=session['userid'])
 
 
 @app.route('/add_to_cart', methods=['POST'])
@@ -55,9 +56,20 @@ def add_to_cart():
         userid = 0
         cartref = random.randint(1000, 9999)
 
-    insertCartQuery="INSERT INTO cart (productid, customerid) VALUES (%s, %s)"
-    cursor.execute(insertCartQuery, (productid,userid),)
-
+    reserveQuery = "SELECT stock, reservedAmount FROM timsfränadatabas.products WHERE productid=%s;"
+    cursor.execute(reserveQuery, (productid,))
+    res = cursor.fetchall()
+    print(res)
+    if(res[0][1] < res[0][0]):
+        insertCartQuery="INSERT INTO cart (productid, customerid) VALUES (%s,%s)"
+        cursor.execute(insertCartQuery, (productid,userid),)
+        print("inserted item in cart, now updating reserved amount")
+        updateQuery="UPDATE timsfränadatabas.products SET reservedAmount=reservedAmount+1 WHERE productid=%s"
+        cursor.execute(updateQuery, (productid,))
+        print("Reserved amount incremented by 1")
+    else:
+        print("item not added to cart, since the reserved amount is the exact amount of the stock")
+    
     db.commit()
     cursor.close()
     db.close()
@@ -72,7 +84,7 @@ def notLoggedInOrderSearch():
     db = mysql.connector.connect(**db_config)
     cursor = db.cursor()
 
-    orderID_query="""SELECT orders.orderid, orders.customeremail, orders.customeradress, orders.customernumber,orders.kvittoorderid, receipts.productname, receipts.productcost FROM timsfränadatabas.orders JOIN receipts ON orders.kvittoorderid=receipts.kvittoorderid WHERE orders.orderid=%s;"""
+    orderID_query="""SELECT orders.orderid, orders.customeremail, orders.customeradress, orders.customernumber,orders.kvittoorderid, orders.orderdate, receipts.productname, receipts.productcost FROM timsfränadatabas.orders JOIN receipts ON orders.kvittoorderid=receipts.kvittoorderid WHERE orders.orderid=%s;"""
     cursor.execute(orderID_query, (searchOrderID,))
     result = cursor.fetchall()
     db.commit()
@@ -282,11 +294,88 @@ def purchasehistory():
     db = mysql.connector.connect(**db_config)
     cursor = db.cursor()
     userid = session['userid']
-    search_query="""SELECT orders.orderid, orders.customeremail, orders.customeradress, orders.customernumber,orders.kvittoorderid, receipts.productname, receipts.productcost FROM timsfränadatabas.orders JOIN receipts ON orders.kvittoorderid=receipts.kvittoorderid WHERE orders.userid=%s;"""
-    data = cursor.execute(search_query, (userid,))
+    #search_query="""SELECT * FROM timsfränadatabas.orders;"""
+    search_query="""SELECT orders.orderid, orders.customeremail, orders.customeradress, orders.customernumber,orders.kvittoorderid, orders.orderdate, orders.status, receipts.productname, receipts.productcost FROM timsfränadatabas.orders JOIN receipts ON orders.kvittoorderid=receipts.kvittoorderid WHERE orders.userid=%s;"""
+    cursor.execute(search_query, (userid,))
     result = cursor.fetchall()
+    db.commit()
+    cursor.close()
+    db.close()
     return render_template("purchaseinformation.html", result=result)
 
+@app.route("/adminAddProduct")
+def adminAddProduct():
+    db = mysql.connector.connect(**db_config)
+    cursor = db.cursor()
+    userid = session['userid']
+    search_query="""SELECT * FROM timsfränadatabas.orders;"""
+    data = cursor.execute(search_query)
+    result = cursor.fetchall()
+    db.commit()
+    cursor.close()
+    db.close()
+    return render_template("adminaddproduct.html", result=result)
+
+@app.route("/adminOrder")
+def adminOrder():
+    db = mysql.connector.connect(**db_config)
+    cursor = db.cursor()
+    userid = session['userid']
+    search_query="""SELECT orders.kvittoorderid, orders.customeremail, orders.customeradress, orders.customernumber, orders.userid, orders.orderdate, GROUP_CONCAT(receipts.productname) AS productnames, GROUP_CONCAT(receipts.productcost) AS productcosts, orders.status FROM timsfränadatabas.orders JOIN receipts ON orders.kvittoorderid = receipts.kvittoorderid GROUP BY orders.kvittoorderid, orders.customeremail, orders.customeradress, orders.customernumber, orders.userid, orders.orderdate, orders.status;"""
+    data = cursor.execute(search_query)
+    result = cursor.fetchall()
+    db.commit()
+    cursor.close()
+    db.close()
+    return render_template("adminorder.html", result=result)
+
+@app.route("/toggleVisibility")
+def toggleVisibility():
+    id = json.loads(request.cookies.get("productid"))
+    db = mysql.connector.connect(**db_config)
+    print(id[0],id[1])
+    cursor = db.cursor()
+    if (int(id[1])==1):
+        print("gick in")
+        search_query="""UPDATE timsfränadatabas.products SET visible=0 WHERE productid=%s;"""
+    else:
+        print("gick in i else")
+        search_query="""UPDATE timsfränadatabas.products SET visible=1 WHERE productid=%s;"""
+    
+    cursor.execute(search_query,(id[0],))
+    db.commit()
+    cursor.close()
+    db.close()
+    return redirect(url_for("index"))
+
+@app.route("/adminConfirm")
+def adminConfirmingOrder():
+    id = json.loads(request.cookies.get("adminConfirmCookie"))
+    print(id)
+    db = mysql.connector.connect(**db_config)
+    cursor = db.cursor()
+    userid = session['userid']
+    search_query="UPDATE timsfränadatabas.orders SET status='Shipped' WHERE kvittoorderid=%s;"
+    data = cursor.execute(search_query,(id,))
+    db.commit()
+    cursor.close()
+    db.close()
+    return redirect(url_for("adminOrder"))
+
+
+@app.route("/adminDeny")
+def adminDenyOrder():
+    id = json.loads(request.cookies.get("adminDenyCookie"))
+    print(id)
+    db = mysql.connector.connect(**db_config)
+    cursor = db.cursor()
+    userid = session['userid']
+    search_query="UPDATE timsfränadatabas.orders SET status='Denied' WHERE kvittoorderid=%s;"
+    data = cursor.execute(search_query,(id,))
+    db.commit()
+    cursor.close()
+    db.close()
+    return redirect(url_for("adminOrder"))
 
 # Beställnings formulär
 @app.route("/order/")
@@ -331,6 +420,35 @@ def order():
     return render_template("order_form.html", totalPrice=totalprice, cartArray=temp)
 
 
+@app.route("/submitproduct", methods=["POST"])
+def submitproduct():
+    print("in submit product")
+    productname = request.form.get("productname")
+    productcost = request.form.get("productcost")
+    productcountryoforigin = request.form.get("productcountryoforigin")
+    stock = request.form.get("stock")
+    productimagefilepath = "Coming soon"
+    productid = random.randint(1, 9999)
+
+    db = mysql.connector.connect(**db_config)
+    cursor = db.cursor()
+
+    insert_query = """
+        INSERT INTO products (productid, productname, productcost, productimagefilepath, productcountryoforigin, stock)
+        VALUES (%s, %s, %s, %s, %s, %s)
+    """
+    
+    cursor.execute(insert_query,(productid, productname, productcost, productimagefilepath, productcountryoforigin, stock),
+    )
+
+    db.commit()
+    cursor.close()
+    db.close()
+    return redirect(url_for("adminAddProduct"))
+
+
+
+
 @app.route("/submitorder",methods=["POST"])
 def submitorder():
     print("in submit order")
@@ -347,9 +465,12 @@ def submitorder():
     customernumber = request.form.get("customerphone")
     
     print(cartArray, len(cartArray), type(cartArray), type(cartArray[0]))
+
     db = mysql.connector.connect(**db_config)
     cursor = db.cursor()
     
+  
+
     for i in cartArray:
         qry="SELECT * FROM timsfränadatabas.products WHERE productid=%s;"
         cursor.execute(qry,(i[0],))
@@ -381,21 +502,23 @@ def submitorder():
                 ),
             )
             db.commit()
-            stock_query = "UPDATE products SET stock = stock - 1 WHERE productid=%s;"
-            print("stock decreased by 1")
+            stock_query = "UPDATE products SET stock=stock-1, reservedAmount=reservedAmount-1 WHERE productid=%s;"
+            print("stock&reservedAmount decreased by 1")
             cursor.execute(stock_query, (productid,))
             db.commit()
             s+=1
 
-
+    orderdate = date.today()
+    print(orderdate)
     orderid = random.randint(1000, 9999)
+    status = "pending"
     insert_query = """
-        INSERT INTO orders (orderid, kvittoorderid, customeremail, customeradress, customernumber, userid)
-        VALUES (%s, %s, %s, %s, %s, %s)
+        INSERT INTO orders (orderid, kvittoorderid, customeremail, customeradress, customernumber, userid, orderdate, status)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
     """
     cursor.execute(
         insert_query,
-        (orderid, kvittoorderid, customeremail, customeradress, customernumber, userid),
+        (orderid, kvittoorderid, customeremail, customeradress, customernumber, userid, orderdate, status),
     )
     db.commit()
     delquery="DELETE FROM cart WHERE customerid=%s;"
@@ -409,130 +532,135 @@ def submitorder():
 
 #När man klickar på checkout så kommer man vidare och får fylla i mailadress adress och telefonnummer
 #Denna funtion gör även lite annat som att minska lagret med ett, skapar ordern och skapar ett kvitto.
-@app.route("/submit_order", methods=["POST"])
-def submit_order():
-    if session['logged_in']:
-        userid = session['userid']
-    else:
-        userid = 0
+# @app.route("/submit_order", methods=["POST"])
+# def submit_order():
+#     if session['logged_in']:
+#         userid = session['userid']
+#     else:
+#         userid = 0
     
-    cartArray = json.loads(request.cookies.get("cartArray"))
-    print("The cart contains:", cartArray)
+#     cartArray = json.loads(request.cookies.get("cartArray"))
+#     print("The cart contains:", cartArray)
 
-    # Kod för att skicka input till databasen
-    try:
-        kvittoorderid = random.randint(1000, 9999)
+#     # Kod för att skicka input till databasen
+#     try:
+#         kvittoorderid = random.randint(1000, 9999)
 
-        for cartArrayIndex in cartArray:
-            productid = int(cartArrayIndex[0])
-            productname = cartArrayIndex[1]
-            productimagefilepath = cartArrayIndex[3]
-            productcountryoforigin = cartArrayIndex[4]
-            kvittoid = random.randint(1000, 9999)
+#         for cartArrayIndex in cartArray:
+#             productid = int(cartArrayIndex[0])
+#             productname = cartArrayIndex[1]
+#             productimagefilepath = cartArrayIndex[3]
+#             productcountryoforigin = cartArrayIndex[4]
+#             kvittoid = random.randint(1000, 9999)
 
-            db = mysql.connector.connect(**db_config)
-            cursor = db.cursor()
+#             db = mysql.connector.connect(**db_config)
+#             cursor = db.cursor()
 
-            retrieve_query = """SELECT products.productcost	FROM timsfränadatabas.products WHERE products.productid=%s"""
-            cursor.execute(retrieve_query,(productid,))
+#             retrieve_query = """SELECT products.productcost	FROM timsfränadatabas.products WHERE products.productid=%s"""
+#             cursor.execute(retrieve_query,(productid,))
             
 
-            result = cursor.fetchone()
-            priceresult=""
-            for i in result:
-                priceresult+=str(i)
-            priceresult=int(priceresult)
-            print(priceresult)
+#             result = cursor.fetchone()
+#             priceresult=""
+#             for i in result:
+#                 priceresult+=str(i)
+#             priceresult=int(priceresult)
+#             print(priceresult)
 
-            db.commit()
-            cursor.close()
-            db.close()
+#             db.commit()
+#             cursor.close()
+#             db.close()
 
-            db = mysql.connector.connect(**db_config)
-            cursor = db.cursor()
+#             db = mysql.connector.connect(**db_config)
+#             cursor = db.cursor()
 
-            insert_query = """
-                INSERT INTO `receipts` (kvittoid, kvittoorderid, productid, productname, productcost, productimagefilepath, productcountryoforigin)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-                """
-            cursor.execute(
-                insert_query,
-                (
-                    kvittoid,
-                    kvittoorderid,
-                    productid,
-                    productname,
-                    priceresult,
-                    productimagefilepath,
-                    productcountryoforigin,
-                ),
-            )
-            print("Passed receipts")
-            db.commit()
-            cursor.close()
+#             insert_query = """
+#                 INSERT INTO `receipts` (kvittoid, kvittoorderid, productid, productname, productcost, productimagefilepath, productcountryoforigin)
+#                 VALUES (%s, %s, %s, %s, %s, %s, %s)
+#                 """
+#             cursor.execute(
+#                 insert_query,
+#                 (
+#                     kvittoid,
+#                     kvittoorderid,
+#                     productid,
+#                     productname,
+#                     priceresult,
+#                     productimagefilepath,
+#                     productcountryoforigin,
+#                 ),
+#             )
+#             print("Passed receipts")
+#             db.commit()
+#             cursor.close()
 
-            # functions like a decrease-in-stock for the database
-            db = mysql.connector.connect(**db_config)
-            cursor = db.cursor()
-            stock_query = "UPDATE products SET stock = stock - 1 WHERE productid=%s;"
-            print("stock decreased by 1")
-            cursor.execute(stock_query, (productid,))
-            db.commit()
-            cursor.close()
-            db.close()
+#             # functions like a decrease-in-stock for the database
+#             db = mysql.connector.connect(**db_config)
+#             cursor = db.cursor()
+#             stock_query = "UPDATE products SET stock = stock - 1 WHERE productid=%s;"
+#             print("stock decreased by 1")
+#             cursor.execute(stock_query, (productid,))
+#             db.commit()
+#             cursor.close()
+#             db.close()
 
-        # Konverterar input från formulär till python variabler
-        # productid = request.form.get('productid')
-        customeremail = request.form.get("customeremail")
-        customeradress = request.form.get("customeradress")
-        customernumber = request.form.get("customerphone")
+#         # Konverterar input från formulär till python variabler
+#         # productid = request.form.get('productid')
+#         customeremail = request.form.get("customeremail")
+#         customeradress = request.form.get("customeradress")
+#         customernumber = request.form.get("customerphone")
+#         orderdate = date.today()
+#         print("this is the orderdate:" + orderdate)
 
-        # Connection till databasen
-        db = mysql.connector.connect(**db_config)
-        cursor = db.cursor()
+#         # Connection till databasen
+#         db = mysql.connector.connect(**db_config)
+#         cursor = db.cursor()
 
-        # Anger ett random orderid, samt säkerställer att productid behandlas som en int
-        orderid = random.randint(1000, 9999)
+#         # Anger ett random orderid, samt säkerställer att productid behandlas som en int
+#         orderid = random.randint(1000, 9999)
 
-        # productid = int(productid)
+#         # productid = int(productid)
 
-        # Skapa ett MySQL commando för att insert input
-        insert_query = """
-            INSERT INTO orders (orderid, kvittoorderid, customeremail, customeradress, customernumber, userid)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """
-        cursor.execute(
-            insert_query,
-            (orderid, kvittoorderid, customeremail, customeradress, customernumber, userid),
-        )
+#         # Skapa ett MySQL commando för att insert input
+#         insert_query = """
+#             INSERT INTO orders (orderid, kvittoorderid, customeremail, customeradress, customernumber, userid, orderdate)
+#             VALUES (%s, %s, %s, %s, %s, %s, %s)
+#         """
+#         cursor.execute(
+#             insert_query,
+#             (orderid, kvittoorderid, customeremail, customeradress, customernumber, userid, orderdate),
+#         )
 
-        # Commitar databas ändringarna och stänger db connection för att undvika felaktiga cursors
-        db.commit()
-        cursor.close()
+#         # Commitar databas ändringarna och stänger db connection för att undvika felaktiga cursors
+#         db.commit()
+#         cursor.close()
         
 
-        # db = mysql.connector.connect(**db_config)
-        # cursor = db.cursor()
+#         # db = mysql.connector.connect(**db_config)
+#         # cursor = db.cursor()
         
-        # username_query = "SELECT username FROM users WHERE userid=%s;"
-        # cursor.execute(stock_query, (,))
-        # username=cursor.fetchone()
-        # print(username)
-        # db.commit()
-        # cursor.close()
+#         # username_query = "SELECT username FROM users WHERE userid=%s;"
+#         # cursor.execute(stock_query, (,))
+#         # username=cursor.fetchone()
+#         # print(username)
+#         # db.commit()
+#         # cursor.close()
 
-        db.close()
+#         db.close()
 
-        username=session['username']
+#         username=session['username']
 
-        # Går tillbaka till index
-        return render_template("tack.html", orderid=orderid, username=username)
+#         # Går tillbaka till index
+#         return render_template("tack.html", orderid=orderid, username=username)
 
-    except Exception as e:
-        # Fångar problem vid uppladdning till databas
-        print(f"Error submitting order: {e}")
-        return render_template("error.html", error_message="Error submitting order")
+#     except Exception as e:
+#         # Fångar problem vid uppladdning till databas
+#         print(f"Error submitting order: {e}")
+#         return render_template("error.html", error_message="Error submitting order")
 
+
+# if __name__ == "__main__":
+#     app.run(host='0.0.0.0', port=5001, debug=True, threaded=True)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(port=5000, debug=True)
