@@ -429,16 +429,16 @@ def submitproduct():
     stock = request.form.get("stock")
     productimagefilepath = "Coming soon"
     productid = random.randint(1, 9999)
-
+    reservedamount=0
     db = mysql.connector.connect(**db_config)
     cursor = db.cursor()
 
     insert_query = """
-        INSERT INTO products (productid, productname, productcost, productimagefilepath, productcountryoforigin, stock)
-        VALUES (%s, %s, %s, %s, %s, %s)
+        INSERT INTO products (productid, productname, productcost, productimagefilepath, productcountryoforigin, stock, reservedamount)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
     """
     
-    cursor.execute(insert_query,(productid, productname, productcost, productimagefilepath, productcountryoforigin, stock),
+    cursor.execute(insert_query,(productid, productname, productcost, productimagefilepath, productcountryoforigin, stock,reservedamount),
     )
 
     db.commit()
