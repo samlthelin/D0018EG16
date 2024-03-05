@@ -84,7 +84,7 @@ def notLoggedInOrderSearch():
     db = mysql.connector.connect(**db_config)
     cursor = db.cursor()
 
-    orderID_query="""SELECT orders.orderid, orders.customeremail, orders.customeradress, orders.customernumber,orders.kvittoorderid, orders.orderdate, receipts.productname, receipts.productcost FROM timsfränadatabas.orders JOIN receipts ON orders.kvittoorderid=receipts.kvittoorderid WHERE orders.orderid=%s;"""
+    orderID_query="""SELECT orders.orderid, orders.customeremail, orders.customeradress, orders.customernumber,orders.kvittoorderid, orders.orderdate, receipts.productname, receipts.productcost, orders.status FROM timsfränadatabas.orders JOIN receipts ON orders.kvittoorderid=receipts.kvittoorderid WHERE orders.orderid=%s;"""
     cursor.execute(orderID_query, (searchOrderID,))
     result = cursor.fetchall()
     db.commit()

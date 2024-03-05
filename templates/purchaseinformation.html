@@ -13,7 +13,7 @@
         {% for column in result %}
             <div>
                 <!--Loopar igenom alla attributer i prodcuts och visar dom --> 
-                <p>OrderID: {{ column[0] }}, Address: {{ column[2] }}, Date: {{ column[5] }}, Product name: {{ column[7] }}, Price: {{ column[8] }}, Status: {{ column[6] }}</p>
+                <p>OrderID: {{ column[0] }}, Address: {{ column[2] }}, Date: {{ column[5] }}, Product name: {{ column[6] }}, Price: {{ column[7] }}, Status: {{ column[8] }}</p>
             </div> 
         {% endfor %}
         <button type="button" onclick="returnToHomepage()">Return to port</button>
